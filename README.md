@@ -22,6 +22,10 @@ The interface uses a dark plum canvas, translucent glass surfaces, soft blurred 
 | Violet | `#2C0E63` | Secondary depth |
 | Midnight | `#12002E` | Core background |
 
+## Mobile experience
+
+The interface is responsive for Android and iPhone-sized screens. On narrow screens, navigation becomes a fixed bottom bar with safe-area support, coworker cards stack vertically, the chat and browser panels become a single column, forms use touch-friendly controls, and the layout accounts for the mobile keyboard and dynamic viewport height. Open the app from the phone browser using the computer/server's LAN address (for example `http://192.168.1.20:8000`) while both devices are on the same network. For access outside the local network, configure a secure VPN or HTTPS reverse proxy; do not expose the unauthenticated app directly to the public internet.
+
 ## Core capabilities
 
 - **Coworker channels:** NOVA (research), PIXEL (development) and SCOUT (browser operations).
