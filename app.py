@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 import httpx
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -25,6 +26,25 @@ DEFAULT=[
  {"id":"pixel","name":"PIXEL","role":"Developer coworker","description":"Creates and reads project files inside its private workspace.","domains":["example.com"],"tools":["file.write","file.read"]},
  {"id":"scout","name":"SCOUT","role":"Browser coworker","description":"Visits approved pages and captures browser evidence.","domains":["example.com"],"tools":["browser.goto","browser.screenshot","file.write","file.read"]}]
 def now(): return datetime.now(timezone.utc).isoformat()
+def secret_cipher():
+ key=os.getenv("KAMY_MASTER_KEY","").strip()
+ if not key: raise HTTPException(503,"Configure KAMY_MASTER_KEY before saving API credentials.")
+ try: return Fernet(key.encode())
+ except Exception: raise HTTPException(503,"KAMY_MASTER_KEY inválida. Gere uma chave Fernet válida.")
+def protect_secret(value):
+ if not value:return None
+ return "fernet:"+secret_cipher().encrypt(value.encode()).decode()
+def reveal_secret(value):
+ if not value:return None
+ if not value.startswith("fernet:"):return value
+ try:return secret_cipher().decrypt(value[8:].encode()).decode()
+ except InvalidToken:raise HTTPException(503,"Não foi possível descriptografar a chave do coworker. Verifique KAMY_MASTER_KEY.")
+def migrate_agent_secrets():
+ if not os.getenv("KAMY_MASTER_KEY","").strip():return
+ cipher=secret_cipher()
+ with conn() as c:
+  for row in c.execute("SELECT id,api_key FROM agents WHERE api_key IS NOT NULL AND api_key NOT LIKE 'fernet:%'").fetchall():
+   c.execute("UPDATE agents SET api_key=? WHERE id=?",("fernet:"+cipher.encrypt(row["api_key"].encode()).decode(),row["id"]))
 @contextmanager
 def conn():
  c=sqlite3.connect(DB,timeout=15); c.row_factory=sqlite3.Row
@@ -42,6 +62,7 @@ def init():
   CREATE TABLE IF NOT EXISTS actions(id TEXT PRIMARY KEY,agent_id TEXT,kind TEXT,payload TEXT,status TEXT,decision TEXT,result TEXT,created TEXT,finished TEXT);""")
   if not c.execute("SELECT 1 FROM agents LIMIT 1").fetchone():
    for a in DEFAULT:c.execute("INSERT INTO agents VALUES(?,?,?,?,?,?,?,?,?)",(a["id"],a["name"],a["role"],a["description"],"meta/llama-3.3-70b-instruct",None,json.dumps(a["domains"]),json.dumps(a["tools"]),now()))
+ migrate_agent_secrets()
 def agent(aid):
  with conn() as c:r=c.execute("SELECT * FROM agents WHERE id=?",(aid,)).fetchone()
  if not r:raise HTTPException(404,"Coworker not found")
@@ -91,13 +112,14 @@ class AgentIn(BaseModel):
 @app.post("/api/agents")
 def add_agent(b:AgentIn):
  if b.api_key and len(b.api_key)>512: raise HTTPException(400,'NVIDIA API key is too long')
+ encrypted_key=protect_secret(b.api_key) if b.api_key else None
  if any(not re.fullmatch(r'[a-zA-Z0-9.-]+',d) for d in b.domains): raise HTTPException(400,'Invalid domain')
  if any(t not in {'browser.goto','browser.screenshot','file.write','file.read'} for t in b.tools): raise HTTPException(400,'Unknown tool')
  aid=re.sub("[^a-z0-9-]","-",b.name.lower()).strip("-")[:24] or uuid.uuid4().hex[:8]
  if any(t not in {"browser.goto","browser.screenshot","file.write","file.read"} for t in b.tools):raise HTTPException(400,"Unknown tool")
  with conn() as c:
   if c.execute("SELECT 1 FROM agents WHERE id=?",(aid,)).fetchone():aid+="-"+uuid.uuid4().hex[:4]
-  c.execute("INSERT INTO agents VALUES(?,?,?,?,?,?,?,?,?)",(aid,b.name,b.role,b.description,b.model,b.api_key,json.dumps(b.domains),json.dumps(b.tools),now()))
+  c.execute("INSERT INTO agents VALUES(?,?,?,?,?,?,?,?,?)",(aid,b.name,b.role,b.description,b.model,encrypted_key,json.dumps(b.domains),json.dumps(b.tools),now()))
  (WORK/aid).mkdir(parents=True,exist_ok=True)
  return {"id":aid}
 class Policy(BaseModel):
@@ -125,7 +147,7 @@ async def chat(aid:str,b:Chat):
  if a["api_key"]:
   try:
    async with httpx.AsyncClient(timeout=90) as client:
-    r=await client.post(NVIDIA_URL,headers={"Authorization":"Bearer "+a["api_key"],"Content-Type":"application/json"},json={"model":a["model"],"messages":[{"role":"system","content":"Você é um coworker do Kamy Bot. Responda em português. Não afirme que realizou ferramentas; as ações precisam ser aprovadas pelo usuário."}]+hist,"temperature":0.5,"max_tokens":1200})
+    r=await client.post(NVIDIA_URL,headers={"Authorization":"Bearer "+reveal_secret(a["api_key"]),"Content-Type":"application/json"},json={"model":a["model"],"messages":[{"role":"system","content":"Você é um coworker do Kamy Bot. Responda em português. Não afirme que realizou ferramentas; as ações precisam ser aprovadas pelo usuário."}]+hist,"temperature":0.5,"max_tokens":1200})
     r.raise_for_status();reply=r.json()["choices"][0]["message"]["content"]
   except Exception:reply="Falha na NVIDIA API. Confira a chave, o modelo e a disponibilidade do endpoint."
  with conn() as c:c.execute("INSERT INTO messages VALUES(?,?,?,?,?)",(str(uuid.uuid4()),aid,"assistant",reply,now()))
