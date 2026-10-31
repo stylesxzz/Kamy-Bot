@@ -96,3 +96,18 @@ def clear_session(response):
     response.delete_cookie(COOKIE,path="/",secure=secure,httponly=True,samesite="strict")
     response.delete_cookie(CSRF_COOKIE,path="/",secure=secure,samesite="strict")
     return response
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self,request,call_next):
+        response=await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options","nosniff")
+        response.headers.setdefault("X-Frame-Options","DENY")
+        response.headers.setdefault("Referrer-Policy","strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy","camera=(), microphone=(), geolocation=()")
+        response.headers.setdefault("Cross-Origin-Opener-Policy","same-origin")
+        response.headers.setdefault("Content-Security-Policy","default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; base-uri 'self'; frame-ancestors 'none'")
+        if request.url.scheme=="https" or request.headers.get("x-forwarded-proto","").split(",")[0].strip()=="https":
+            response.headers.setdefault("Strict-Transport-Security","max-age=31536000; includeSubDomains")
+        if request.url.path.startswith("/api/"):response.headers["Cache-Control"]="no-store"
+        return response
