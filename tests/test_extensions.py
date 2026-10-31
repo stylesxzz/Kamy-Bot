@@ -9,7 +9,7 @@ def ext_client(tmp_path, monkeypatch):
     monkeypatch.setenv("KAMY_MASTER_KEY","")
     monkeypatch.setattr(extensions,"DB",tmp_path/"extensions.sqlite3")
     extensions.init_db()
-    with TestClient(app.app) as client:
+    with TestClient(app.app, client=("127.0.0.1", 50000)) as client:
         yield client
 
 def test_skill_requires_review(ext_client):
