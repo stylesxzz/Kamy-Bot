@@ -126,7 +126,7 @@ def test_mcp_can_be_disabled_without_launching_process(ext_client):
 def test_mcp_tool_requires_individual_grant_and_explicit_approval(ext_client, monkeypatch):
     sid = "server-test"
     with extensions.db() as db:
-        db.execute("INSERT INTO mcp_servers VALUES(?,?,?,?,?,?,?,?)", (sid,"Test MCP","streamable-http","https://mcp.example.com/mcp",None,"[]","registered_unverified",1.0))
+        db.execute("INSERT INTO mcp_servers(id,name,transport,url,command,args,status,created) VALUES(?,?,?,?,?,?,?,?)", (sid,"Test MCP","streamable-http","https://mcp.example.com/mcp",None,"[]","registered_unverified",1.0))
         db.execute("INSERT INTO mcp_tools VALUES(?,?,?,?,?)", (sid,"lookup","Read-only lookup",'{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}',1.0))
     denied = ext_client.post(f"/api/extensions/mcp/{sid}/tools/lookup/proposals", json={"arguments":{"query":"test"}})
     assert denied.status_code == 403
