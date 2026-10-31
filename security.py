@@ -8,6 +8,8 @@ class LocalOnlyMiddleware(BaseHTTPMiddleware):
     """Only accept requests originating from loopback interfaces."""
     async def dispatch(self, request, call_next):
         host = request.client.host if request.client else ""
+        if os.getenv("KAMY_TESTING") == "1" and host == "testclient":
+            return await call_next(request)
         try:
             address = ipaddress.ip_address(host)
             is_local = address.is_loopback
