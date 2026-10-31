@@ -289,6 +289,10 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+cp .env.example .env
+# Edite .env e configure KAMY_ADMIN_PASSWORD, KAMY_SESSION_SECRET e KAMY_MASTER_KEY.
+# Para HTTP local, mantenha KAMY_COOKIE_SECURE=0.
+set -a; . ./.env; set +a
 export KAMY_BROWSER_ENABLED=0
 uvicorn app:app --host 127.0.0.1 --port 8000
 \`\`\`
