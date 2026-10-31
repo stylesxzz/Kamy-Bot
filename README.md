@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/kamy-mark.svg" width="112" alt="Símbolo Kamy Bot" />
+  <img src="assets/kamy-mascot.svg" width="112" alt="Mascote oficial da Kamy Bot" />
   <h1>KAMY BOT</h1>
   <p><strong>Um espaço de trabalho de IA com agentes especializados, ferramentas e automações supervisionadas.</strong></p>
   <p>Seu ambiente de coworkers de IA: organize tarefas, converse com agentes independentes, conecte modelos e ferramentas externas e acompanhe ações com controle e auditoria.</p>
@@ -7,7 +7,7 @@
   <p><a href="https://github.com/stylesxzz/Kamy-Bot">Repositório</a> · <a href="https://build.nvidia.com/">NVIDIA API Catalog</a> · <a href="https://docs.api.nvidia.com/nim/reference/llm-apis">Documentação NVIDIA NIM</a></p>
 </div>
 
-# O que é o Kamy Bot?
+# Mascote oficial\n\nO ícone enviado foi incorporado como mascote visual do Kamy Bot em `assets/kamy-mascot.svg`, usado na marca e na tela inicial.\n\n# O que é o Kamy Bot?
 
 O **Kamy Bot** é uma plataforma de coworkers de inteligência artificial que pode ser hospedada pelo próprio usuário. Em vez de ser apenas um chatbot que responde mensagens, ele foi concebido como um ambiente de trabalho no qual diferentes agentes de IA podem receber tarefas, manter conversas e configurações próprias, utilizar ferramentas autorizadas e organizar arquivos em espaços separados.
 
@@ -135,7 +135,7 @@ A aprovação humana reduz o risco de ações indesejadas, mas não substitui au
 
 # Camada de extensões
 
-A camada de extensões amplia o Kamy Bot sem substituir os coworkers e recursos originais. Ela foi iniciada como uma API modular e ainda não deve ser confundida com uma loja visual de extensões ou com um executor universal de ferramentas.
+A camada de extensões amplia o Kamy Bot sem substituir os coworkers e recursos originais. A interface visual de Skills, MCP, Connect/OAuth, Finance e Kamy Intel está disponível na seção **Extensions** do workspace. Ela foi iniciada como uma API modular e ainda não deve ser confundida com uma loja visual de extensões ou com um executor universal de ferramentas.
 
 ## 6. Skills — habilidades instaláveis
 
