@@ -494,3 +494,51 @@ For an internet-facing deployment, add authentication, HTTPS, CSRF protection, r
 ## 16. License
 
 MIT. See [LICENSE](LICENSE).
+
+## 17. Modular extensions — Finance, MCP, OAuth and Kamy Intel
+
+The extension API is additive. The original NOVA / PIXEL / SCOUT coworker routes, NVIDIA NIM, browser approval, workspaces and audit workflow remain available.
+
+### Master encryption key
+OAuth client secrets and access/refresh tokens are encrypted at rest with Fernet. Generate a persistent key once:
+~~~bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+~~~
+Set it as KAMY_MASTER_KEY in the private deployment environment. Back it up securely: losing it makes previously encrypted tokens unrecoverable. Never commit it.
+
+### Skills API
+- GET /api/extensions/skills — list skills.
+- POST /api/extensions/skills — submit declarative Markdown for review.
+- POST /api/extensions/skills/{id}/approve — enable a reviewed skill.
+- POST /api/extensions/skills/{id}/disable — disable it.
+
+The initial installer accepts instruction-only Markdown. It does not execute downloaded Python, shell or JavaScript. Review external skill repositories before trusting their instructions.
+
+### MCP registry
+- GET /api/extensions/mcp — list configured servers.
+- POST /api/extensions/mcp — register streamable-http, sse or stdio configuration.
+- POST /api/extensions/mcp/{id}/disable — disable a registration.
+
+Remote MCP endpoints must use HTTPS. HTTP is allowed only for loopback development endpoints. STDIO commands are stored as configuration and are not launched by this registry. This initial release provides registration metadata, not yet a general MCP client/tool execution runtime. Do not register untrusted servers.
+
+### OAuth provider setup
+Register a provider with its official authorization URL, token URL, client ID, exact HTTPS callback URI and minimum scopes. Then call POST /api/extensions/oauth/{provider_id}/start and open the returned authorization_url in the user's browser. The callback exchanges the code using PKCE S256 and stores tokens encrypted. Register the callback URI exactly in the provider console. The app does not collect passwords, bypass MFA, or automate credential entry. Provider-specific refresh, revocation and API adapters remain follow-up work.
+
+### Finance workflow
+- POST /api/extensions/finance/order-proposals — create a buy/sell proposal.
+- GET /api/extensions/finance/order-proposals — list proposals.
+- POST /api/extensions/finance/order-proposals/{id}/approve — approve for adapter integration.
+- POST /api/extensions/finance/order-proposals/{id}/execute — deliberately returns HTTP 501 until a reviewed provider-specific trading adapter is implemented.
+
+The current layer supports proposal and approval tracking only; it does not send orders or claim compatibility with every broker. Financial institutions have different APIs, eligibility, scopes and contractual restrictions. Use official APIs and user-authorized consent. Never provide brokerage passwords or private keys to the agent.
+
+### Kamy Intel — evidence ledger
+- POST /api/extensions/intel/cases — create a research case with a stated purpose.
+- GET /api/extensions/intel/cases — list cases.
+- POST /api/extensions/intel/cases/{id}/evidence — attach a public HTTPS source, excerpt and observation date.
+- GET /api/extensions/intel/cases/{id}/evidence — retrieve evidence.
+
+This is an evidence ledger, not an automatic social-network scraper. Platform searches must use public information or official APIs with user-authorized read-only scopes. Do not use it for private-account access, doxxing, stalking or bypassing platform controls. Distinguish verified facts from hypotheses and record source URLs and dates.
+
+### Current implementation boundary
+This release adds extension APIs and persistence. It does not yet include a visual extension marketplace, universal MCP execution engine, provider-specific brokerage adapters, automatic OAuth discovery for every provider, or automatic social-platform search connectors. Those require provider-specific implementation and tests.
