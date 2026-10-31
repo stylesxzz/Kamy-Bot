@@ -337,7 +337,7 @@ Em desenvolvimento local, use o endereço de callback que o provedor aceite e qu
 
 - Docker Compose publica em \`127.0.0.1\` por padrão.
 - Não altere \`KAMY_BIND\` para \`0.0.0.0\` em uma rede pública sem uma camada de autenticação, HTTPS, firewall e revisão de segurança.
-- A aplicação atual não deve ser considerada multiusuário nem pronta para exposição direta à Internet.
+- A aplicação atual não possui autenticação multiusuário própria e não está pronta para exposição direta à Internet. O bind local padrão reduz exposição acidental, mas não substitui autenticação.
 - Não coloque chaves de API, senhas ou tokens no Git, em Issues ou em Skills.
 - Revise conteúdo de Skills e origem de servidores MCP antes de cadastrá-los.
 - Conceda o menor conjunto possível de escopos OAuth.
@@ -345,7 +345,7 @@ Em desenvolvimento local, use o endereço de callback que o provedor aceite e qu
 - Operações financeiras reais permanecem desabilitadas.
 - Faça backup regular do volume Docker e da chave mestra OAuth.
 
-O gate de aprovação e as allowlists são controles da aplicação, não substitutos de autenticação de operador, isolamento de rede ou sandbox de execução. Antes de uma implantação pública, implemente autenticação, proteção CSRF, rate limiting, filtragem de egress, gestão de sessões, isolamento reforçado e revisão independente.
+O gate de aprovação e as allowlists são controles da aplicação, não substitutos de autenticação de operador, isolamento de rede ou sandbox de execução. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. Antes de uma implantação pública, implemente autenticação, proteção CSRF, rate limiting, filtragem de egress, gestão de sessões, isolamento reforçado e revisão independente.
 
 ## Testes e validação local
 
