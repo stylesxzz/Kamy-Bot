@@ -38,10 +38,9 @@ def init_db():
   CREATE TABLE IF NOT EXISTS intel_cases(id TEXT PRIMARY KEY,query TEXT,purpose TEXT,status TEXT,created REAL);
   CREATE TABLE IF NOT EXISTS intel_evidence(id TEXT PRIMARY KEY,case_id TEXT,url TEXT,title TEXT,snippet TEXT,observed_at TEXT,source_type TEXT,created REAL);
   """)
+  _cols={r["name"] for r in c.execute("PRAGMA table_info(mcp_servers)")}
+  if "oauth_provider_id" not in _cols:c.execute("ALTER TABLE mcp_servers ADD COLUMN oauth_provider_id TEXT")
 init_db()
-with db() as _c:
-    _cols={r["name"] for r in _c.execute("PRAGMA table_info(mcp_servers)")}
-    if "oauth_provider_id" not in _cols:_c.execute("ALTER TABLE mcp_servers ADD COLUMN oauth_provider_id TEXT")
 def cipher():
  key=os.getenv("KAMY_MASTER_KEY","").strip()
  if not key: raise HTTPException(503,"Configure KAMY_MASTER_KEY with a valid Fernet key before storing OAuth secrets or tokens.")
