@@ -107,7 +107,10 @@ def mcp_add(b:MCPIn):
    if not c.execute("SELECT 1 FROM oauth_providers WHERE id=?",(b.oauth_provider_id,)).fetchone():raise HTTPException(404,"OAuth provider not found.")
  if b.transport=="stdio" and b.oauth_provider_id:raise HTTPException(400,"OAuth is only for HTTP-based MCP connections, not STDIO.")
  ident=str(uuid.uuid4())
- with db() as c:c.execute("INSERT INTO mcp_servers(id,name,transport,url,command,args,status,created,oauth_provider_id) VALUES(?,?,?,?,?,?,?,?,?)",(ident,b.name,b.transport,b.url,command,json.dumps(b.args),"registered_unverified",time.time(),b.oauth_provider_id))
+ with db() as c:
+  cols={r["name"] for r in c.execute("PRAGMA table_info(mcp_servers)")}
+  if "oauth_provider_id" not in cols:c.execute("ALTER TABLE mcp_servers ADD COLUMN oauth_provider_id TEXT")
+  c.execute("INSERT INTO mcp_servers(id,name,transport,url,command,args,status,created,oauth_provider_id) VALUES(?,?,?,?,?,?,?,?,?)",(ident,b.name,b.transport,b.url,command,json.dumps(b.args),"registered_unverified",time.time(),b.oauth_provider_id))
  return {"id":ident,"status":"registered_unverified","message":"Registrado, não executado. Revise origem e permissões antes de habilitar."}
 @router.post("/mcp/{sid}/disable")
 def mcp_disable(sid:str):
