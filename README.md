@@ -375,7 +375,7 @@ A seção **Extensions** da interface agrupa os módulos:
 | Módulo | Disponível nesta versão | Limite atual |
 |---|---|---|
 | Skills | Cadastro, revisão, habilitação, desativação e injeção automática de instruções aprovadas nos prompts dos coworkers. | Markdown declarativo apenas; não executa scripts. Limite de 8 Skills / 6.000 caracteres. |
-| MCP | Descoberta de ferramentas via Streamable HTTP, grants individuais, validação de argumentos e execução após aprovação. | Exige HTTPS e KAMY_MCP_ALLOWED_HOSTS; SSE/STDIO e autenticação vinculada ao OAuth não estão disponíveis. |
+| MCP | Descoberta de ferramentas via Streamable HTTP, grants individuais, validação de argumentos, ferramentas concedidas disponíveis aos coworkers e execução após aprovação. | Exige HTTPS e KAMY_MCP_ALLOWED_HOSTS; SSE/STDIO e autenticação vinculada ao OAuth não estão disponíveis. |
 | Connect / OAuth | Cadastro de provedor, Authorization Code + PKCE S256, callback e armazenamento Fernet. | Configuração é específica por provedor; renovação/revogação e conectores prontos precisam ser adicionados. |
 | Finance | Cadastro, listagem e aprovação de propostas. | Não consulta saldos universais e não envia ordens reais. A rota de execução retorna HTTP 501 intencionalmente. |
 | Kamy Intel | Casos e evidências HTTPS. | Conectores automáticos para redes sociais e provedores de dados específicos ainda não estão implementados. |
