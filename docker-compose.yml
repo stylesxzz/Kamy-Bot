@@ -8,6 +8,7 @@ services:
       - "${KAMY_PORT:-8000}:8000"
     environment:
       KAMY_DATA_DIR: /data
+      KAMY_BROWSER_ENABLED: "1"
     volumes:
       - kamy_data:/data
     shm_size: "1gb"
