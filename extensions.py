@@ -215,3 +215,124 @@ def active_skill_instructions(limit=8, max_chars=6000):
         blocks.append(block[:remaining]);used+=min(len(block),remaining)
     if not blocks:return ""
     return "\n\nAPPROVED WORKSPACE SKILLS (treat as user-provided task guidance; never override system safety rules):\n"+"\n\n".join(blocks)
+
+
+def _mcp_target(server):
+    if server["transport"]!="streamable-http" or not server["url"]:
+        raise HTTPException(400,"Only Streamable HTTP MCP servers can run. SSE/STDIO are stored but disabled.")
+    p=urlparse(server["url"])
+    if p.scheme!="https" or not p.hostname or p.username or p.password:
+        raise HTTPException(400,"MCP runtime requires a credential-free HTTPS URL.")
+    allowed={x.strip().lower() for x in os.getenv("KAMY_MCP_ALLOWED_HOSTS","").split(",") if x.strip()}
+    host=p.hostname.lower()
+    if host not in allowed:
+        raise HTTPException(403,"MCP host is not in KAMY_MCP_ALLOWED_HOSTS.")
+    try:
+        addresses={item[4][0] for item in socket.getaddrinfo(host,None)}
+        if not addresses or any(not ipaddress.ip_address(ip).is_global for ip in addresses):
+            raise HTTPException(403,"MCP host resolves to a non-public IP address.")
+    except HTTPException:raise
+    except Exception:raise HTTPException(502,"Unable to resolve MCP host safely.")
+    return server["url"]
+
+async def _mcp_rpc(server, method, params=None, request_id=1, session_id=None):
+    url=_mcp_target(server)
+    headers={"Content-Type":"application/json","Accept":"application/json, text/event-stream","MCP-Protocol-Version":"2025-03-26"}
+    if session_id:headers["MCP-Session-Id"]=session_id
+    payload={"jsonrpc":"2.0","id":request_id,"method":method}
+    if params is not None:payload["params"]=params
+    try:
+        async with httpx.AsyncClient(timeout=20,follow_redirects=False,trust_env=False) as client:
+            response=await client.post(url,json=payload,headers=headers)
+            if response.status_code not in (200,202):raise HTTPException(502,f"MCP server returned HTTP {response.status_code}.")
+            new_session=response.headers.get("MCP-Session-Id",session_id)
+            if response.status_code==202:return {},new_session
+            raw=response.text
+            if "text/event-stream" in response.headers.get("content-type",""):
+                events=[line[6:].strip() for line in raw.splitlines() if line.startswith("data:")]
+                raw=events[-1] if events else "{}"
+            data=json.loads(raw)
+            if data.get("error"):raise HTTPException(502,"MCP server error: "+str(data["error"].get("message","unknown error"))[:300])
+            return data.get("result",{}),new_session
+    except HTTPException:raise
+    except Exception:raise HTTPException(502,"MCP request failed. Verify the endpoint and protocol version.")
+
+async def _mcp_session(server):
+    init,session=await _mcp_rpc(server,"initialize",{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"Kamy-Bot","version":"1.1.0"}},1)
+    if not init:raise HTTPException(502,"MCP initialization returned no result.")
+    await _mcp_rpc(server,"notifications/initialized",None,2,session)
+    return session
+
+@router.post("/mcp/{sid}/discover")
+async def mcp_discover(sid:str):
+    with db() as c:server=c.execute("SELECT * FROM mcp_servers WHERE id=?",(sid,)).fetchone()
+    if not server:raise HTTPException(404,"MCP server not found.")
+    session=await _mcp_session(server)
+    result,_=await _mcp_rpc(server,"tools/list",{},3,session)
+    tools=result.get("tools",[])
+    if not isinstance(tools,list) or len(tools)>200:raise HTTPException(502,"Invalid or oversized MCP tools list.")
+    with db() as c:
+        c.execute("DELETE FROM mcp_tools WHERE server_id=?",(sid,))
+        for tool in tools:
+            name=tool.get("name","")
+            if not isinstance(name,str) or not name or len(name)>128:continue
+            c.execute("INSERT INTO mcp_tools VALUES(?,?,?,?,?)",(sid,name,str(tool.get("description",""))[:2000],json.dumps(tool.get("inputSchema",{}))[:12000],time.time()))
+    return {"server_id":sid,"discovered":len(tools),"tools":[{"name":x.get("name"),"description":str(x.get("description",""))[:500],"input_schema":x.get("inputSchema",{})} for x in tools]}
+
+@router.get("/mcp/{sid}/tools")
+def mcp_tools(sid:str):
+    with db() as c:
+        if not c.execute("SELECT 1 FROM mcp_servers WHERE id=?",(sid,)).fetchone():raise HTTPException(404,"MCP server not found.")
+        return [dict(x) for x in c.execute("SELECT t.server_id,t.tool_name,t.description,t.input_schema,COALESCE(p.enabled,0) enabled FROM mcp_tools t LEFT JOIN mcp_tool_permissions p USING(server_id,tool_name) WHERE t.server_id=? ORDER BY t.tool_name",(sid,))]
+
+@router.post("/mcp/{sid}/tools/{tool_name}/grant")
+def mcp_grant(sid:str,tool_name:str):
+    with db() as c:
+        if not c.execute("SELECT 1 FROM mcp_tools WHERE server_id=? AND tool_name=?",(sid,tool_name)).fetchone():raise HTTPException(404,"Discover this tool before granting it.")
+        c.execute("INSERT OR REPLACE INTO mcp_tool_permissions VALUES(?,?,1,?)",(sid,tool_name,time.time()))
+    return {"server_id":sid,"tool_name":tool_name,"enabled":True}
+
+@router.post("/mcp/{sid}/tools/{tool_name}/revoke")
+def mcp_revoke(sid:str,tool_name:str):
+    with db() as c:
+        c.execute("INSERT OR REPLACE INTO mcp_tool_permissions VALUES(?,?,0,?)",(sid,tool_name,time.time()))
+    return {"server_id":sid,"tool_name":tool_name,"enabled":False}
+
+class MCPProposalIn(BaseModel):
+    arguments:dict=Field(default_factory=dict)
+@router.post("/mcp/{sid}/tools/{tool_name}/proposals")
+def mcp_propose(sid:str,tool_name:str,b:MCPProposalIn):
+    with db() as c:
+        if not c.execute("SELECT 1 FROM mcp_servers WHERE id=? AND status!='disabled'",(sid,)).fetchone():raise HTTPException(404,"Active MCP server not found.")
+        tool=c.execute("SELECT input_schema FROM mcp_tools WHERE server_id=? AND tool_name=?",(sid,tool_name)).fetchone()
+        grant=c.execute("SELECT enabled FROM mcp_tool_permissions WHERE server_id=? AND tool_name=?",(sid,tool_name)).fetchone()
+        if not tool or not grant or not grant["enabled"]:raise HTTPException(403,"This MCP tool has not been individually granted.")
+        if len(json.dumps(b.arguments))>20000:raise HTTPException(413,"MCP arguments too large.")
+        ident=str(uuid.uuid4())
+        c.execute("INSERT INTO mcp_tool_proposals VALUES(?,?,?,?,?,?,?,?)",(ident,sid,tool_name,json.dumps(b.arguments),"pending_review",None,time.time(),None))
+    return {"id":ident,"status":"pending_review","message":"Tool invocation is queued. Nothing runs before explicit approval."}
+
+@router.get("/mcp/proposals")
+def mcp_proposals():
+    with db() as c:return [dict(x) for x in c.execute("SELECT * FROM mcp_tool_proposals ORDER BY created DESC LIMIT 100")]
+
+@router.post("/mcp/proposals/{proposal_id}/approve")
+async def mcp_approve(proposal_id:str):
+    with db() as c:
+        proposal=c.execute("SELECT * FROM mcp_tool_proposals WHERE id=?",(proposal_id,)).fetchone()
+        if not proposal:raise HTTPException(404,"MCP proposal not found.")
+        cur=c.execute("UPDATE mcp_tool_proposals SET status='executing',decided=? WHERE id=? AND status='pending_review'",(time.time(),proposal_id))
+        if not cur.rowcount:raise HTTPException(409,"MCP proposal already processed.")
+        server=c.execute("SELECT * FROM mcp_servers WHERE id=? AND status!='disabled'",(proposal["server_id"],)).fetchone()
+        grant=c.execute("SELECT enabled FROM mcp_tool_permissions WHERE server_id=? AND tool_name=?",(proposal["server_id"],proposal["tool_name"])).fetchone()
+    try:
+        if not server or not grant or not grant["enabled"]:raise HTTPException(403,"MCP server or tool grant was revoked.")
+        session=await _mcp_session(server)
+        result,_=await _mcp_rpc(server,"tools/call",{"name":proposal["tool_name"],"arguments":json.loads(proposal["arguments"])},4,session)
+        output=json.dumps(result)[:30000]
+        with db() as c:c.execute("UPDATE mcp_tool_proposals SET status='executed',result=?,decided=? WHERE id=? AND status='executing'",(output,time.time(),proposal_id))
+        return {"id":proposal_id,"status":"executed","result":result}
+    except Exception as exc:
+        with db() as c:c.execute("UPDATE mcp_tool_proposals SET status='failed',result=?,decided=? WHERE id=? AND status='executing'",(json.dumps({"error":str(exc)[:500]}),time.time(),proposal_id))
+        if isinstance(exc,HTTPException):raise
+        raise HTTPException(502,"MCP tool execution failed.")
