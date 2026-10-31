@@ -14,6 +14,7 @@ services:
       KAMY_ADMIN_PASSWORD: "${KAMY_ADMIN_PASSWORD:-}"
       KAMY_SESSION_SECRET: "${KAMY_SESSION_SECRET:-}"
       KAMY_COOKIE_SECURE: "${KAMY_COOKIE_SECURE:-1}"
+      KAMY_MCP_ALLOWED_HOSTS: "${KAMY_MCP_ALLOWED_HOSTS:-}"
     volumes:
       - kamy_data:/data
     shm_size: "1gb"
