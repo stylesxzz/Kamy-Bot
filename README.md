@@ -420,7 +420,7 @@ No Windows, execute os mesmos comandos em um ambiente com Python, Node.js e Dock
 \`\`\`text
 Kamy-Bot/
 ├── app.py                    # Aplicação FastAPI e coworkers originais
-├── extensions.py             # APIs iniciais da camada de extensões
+├── extensions.py             # Skills, OAuth, MCP, Finance e Intel APIs\n├── security.py               # Sessões administrativas, CSRF e headers de segurança
 ├── requirements.txt          # Dependências do backend
 ├── requirements-browser.txt  # Dependências do navegador
 ├── Dockerfile
