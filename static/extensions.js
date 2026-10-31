@@ -1,7 +1,7 @@
 (()=>{"use strict";
 const $=s=>document.querySelector(s), esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const base="/api/extensions";let current="skills",cases=[];
-async function req(path,opts={}){const r=await fetch(base+path,{headers:{"Content-Type":"application/json"},...opts});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.detail||"Falha na operação");return d}
+async function req(path,opts={}){const csrf=document.cookie.split("; ").find(x=>x.startsWith("kamy_csrf="))?.split("=")[1]||"",method=(opts.method||"GET").toUpperCase(),headers={"Content-Type":"application/json",...(opts.headers||{})};if(["POST","PUT","PATCH","DELETE"].includes(method))headers["X-CSRF-Token"]=decodeURIComponent(csrf);const r=await fetch(base+path,{...opts,method,headers,credentials:"same-origin"});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.detail||"Falha na operação");return d}
 function form(title,fields,submit){return '<form class="ext-form" data-submit="'+submit+'"><h3>'+title+'</h3>'+fields+'</form>'}
 function field(label,name,placeholder,type="text",required=true){return '<label>'+label+'<input name="'+name+'" type="'+type+'" placeholder="'+placeholder+'" '+(required?"required":"")+'></label>'}
 function area(label,name,placeholder){return '<label>'+label+'<textarea name="'+name+'" placeholder="'+placeholder+'" required></textarea></label>'}
