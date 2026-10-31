@@ -179,3 +179,7 @@ async def shot(aid:str):
 @app.get("/api/workspace/{aid}")
 def workspace(aid:str):
  agent(aid);return [{"path":str(p.relative_to(WORK/aid)),"bytes":p.stat().st_size} for p in (WORK/aid).rglob("*") if p.is_file()]
+
+# Modular capability APIs; original coworker routes remain unchanged.
+from extensions import router as extensions_router
+app.include_router(extensions_router)
