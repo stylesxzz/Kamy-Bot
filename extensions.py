@@ -1,5 +1,5 @@
 """Kamy Bot extension control plane. Downloaded skill code, arbitrary MCP commands and financial orders are never executed automatically."""
-import base64, hashlib, json, os, secrets, sqlite3, time, uuid, socket, ipaddress
+import base64, hashlib, hmac, json, os, secrets, sqlite3, time, uuid, socket, ipaddress, re
 from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
@@ -34,6 +34,7 @@ def init_db():
   CREATE TABLE IF NOT EXISTS oauth_states(state TEXT PRIMARY KEY,provider_id TEXT,verifier TEXT,expires REAL,created REAL);
   CREATE TABLE IF NOT EXISTS oauth_tokens(provider_id TEXT PRIMARY KEY,access_token TEXT,refresh_token TEXT,token_type TEXT,scope TEXT,expires_at REAL,updated REAL);
   CREATE TABLE IF NOT EXISTS order_proposals(id TEXT PRIMARY KEY,provider_id TEXT,asset TEXT,side TEXT,quantity REAL,order_type TEXT,limit_price REAL,status TEXT,created REAL,decision_at REAL);
+  CREATE TABLE IF NOT EXISTS binance_config(id INTEGER PRIMARY KEY CHECK(id=1),api_key TEXT,api_secret TEXT,testnet INTEGER,updated REAL);
   CREATE TABLE IF NOT EXISTS intel_cases(id TEXT PRIMARY KEY,query TEXT,purpose TEXT,status TEXT,created REAL);
   CREATE TABLE IF NOT EXISTS intel_evidence(id TEXT PRIMARY KEY,case_id TEXT,url TEXT,title TEXT,snippet TEXT,observed_at TEXT,source_type TEXT,created REAL);
   """)
@@ -489,3 +490,72 @@ async def oauth_refresh(pid: str):
         c.execute("UPDATE oauth_tokens SET access_token=?,refresh_token=?,token_type=?,scope=?,expires_at=?,updated=? WHERE provider_id=?",
             (seal(token["access_token"]), seal(token.get("refresh_token") or refresh_token), token.get("token_type","Bearer"), token.get("scope",stored["scope"]), time.time()+int(token.get("expires_in",3600)), time.time(), pid))
     return {"refreshed": True, "provider": provider["name"]}
+
+# Binance is a direct exchange integration, not OAuth and not an MCP provider.
+class BinanceConfigIn(BaseModel):
+    api_key:str=Field(min_length=10,max_length=256)
+    api_secret:str=Field(min_length=20,max_length=256)
+    testnet:bool=True
+
+@router.get("/finance/binance/config")
+def binance_config():
+    with db() as c:r=c.execute("SELECT testnet,updated FROM binance_config WHERE id=1").fetchone()
+    return {"configured":bool(r),"testnet":bool(r["testnet"]) if r else True,"updated":r["updated"] if r else None}
+
+@router.put("/finance/binance/config")
+def binance_save(b:BinanceConfigIn):
+    with db() as c:c.execute("INSERT OR REPLACE INTO binance_config VALUES(1,?,?,?,?)",(seal(b.api_key),seal(b.api_secret),int(b.testnet),time.time()))
+    return {"configured":True,"testnet":b.testnet,"message":"Binance API credentials encrypted locally. Use a key with withdrawals disabled."}
+
+def _binance_credentials():
+    with db() as c:r=c.execute("SELECT * FROM binance_config WHERE id=1").fetchone()
+    if not r:raise HTTPException(409,"Configure Binance API credentials first.")
+    return unseal(r["api_key"]),unseal(r["api_secret"]),bool(r["testnet"])
+
+async def _binance_request(method,path,params=None,signed=False):
+    api_key,secret,testnet=_binance_credentials() if signed else (None,None,True)
+    if not signed:
+        with db() as c:r=c.execute("SELECT testnet FROM binance_config WHERE id=1").fetchone()
+        testnet=bool(r["testnet"]) if r else True
+    base="https://testnet.binance.vision" if testnet else "https://api.binance.com"
+    query=dict(params or {});headers={}
+    if signed:
+        query["timestamp"]=int(time.time()*1000);query["recvWindow"]=5000
+        encoded=urlencode(query)
+        query["signature"]=hmac.new(secret.encode(),encoded.encode(),hashlib.sha256).hexdigest()
+        headers["X-MBX-APIKEY"]=api_key
+    try:
+        async with httpx.AsyncClient(timeout=12,follow_redirects=False,trust_env=False) as client:
+            response=await client.request(method,base+path,params=query,headers=headers)
+        data=response.json()
+        if response.is_error:
+            msg=data.get("msg","Binance request failed") if isinstance(data,dict) else "Binance request failed"
+            raise HTTPException(response.status_code if response.status_code<500 else 502,"Binance: "+str(msg)[:300])
+        return data
+    except HTTPException:raise
+    except Exception:raise HTTPException(502,"Could not reach Binance API.")
+
+@router.get("/finance/binance/price/{symbol}")
+async def binance_price(symbol:str):
+    if not re.fullmatch(r"[A-Z0-9]{5,20}",symbol.upper()):raise HTTPException(400,"Invalid trading symbol.")
+    return await _binance_request("GET","/api/v3/ticker/price",{"symbol":symbol.upper()})
+
+@router.get("/finance/binance/account")
+async def binance_account():
+    data=await _binance_request("GET","/api/v3/account",{"omitZeroBalances":"true"},True)
+    return {"accountType":data.get("accountType"),"canTrade":data.get("canTrade"),"balances":[x for x in data.get("balances",[]) if float(x.get("free",0))+float(x.get("locked",0))>0]}
+
+class BinanceOrderIn(BaseModel):
+    symbol:str=Field(pattern="^[A-Z0-9]{5,20}$")
+    side:str=Field(pattern="^(BUY|SELL)$")
+    quantity:float=Field(gt=0,le=1000000)
+    confirm:bool=False
+    test_order:bool=True
+
+@router.post("/finance/binance/order")
+async def binance_order(b:BinanceOrderIn):
+    if not b.confirm:raise HTTPException(428,"Set confirm=true only after reviewing symbol, side and quantity.")
+    params={"symbol":b.symbol,"side":b.side,"type":"MARKET","quantity":format(b.quantity,".12f")}
+    if b.test_order:
+        return await _binance_request("POST","/api/v3/order/test",params,True)
+    return await _binance_request("POST","/api/v3/order",params,True)
