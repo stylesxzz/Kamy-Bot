@@ -9,6 +9,7 @@ services:
     environment:
       KAMY_DATA_DIR: /data
       KAMY_BROWSER_ENABLED: "${KAMY_BROWSER_ENABLED:-1}"
+      KAMY_MASTER_KEY: "${KAMY_MASTER_KEY:-}"
     volumes:
       - kamy_data:/data
     shm_size: "1gb"
