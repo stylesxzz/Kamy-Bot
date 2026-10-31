@@ -19,8 +19,9 @@ DATA=Path(os.getenv("KAMY_DATA_DIR","./data")); WORK=DATA/"workspaces"; DB=DATA/
 DATA.mkdir(parents=True,exist_ok=True); WORK.mkdir(parents=True,exist_ok=True)
 NVIDIA_URL="https://integrate.api.nvidia.com/v1/chat/completions"
 app=FastAPI(title="Kamy Bot",version="1.1.0",docs_url=None,redoc_url=None,openapi_url=None)
-from security import SecurityMiddleware, login as security_login, apply_session, clear_session
+from security import SecurityMiddleware, SecurityHeadersMiddleware, login as security_login, apply_session, clear_session
 app.add_middleware(SecurityMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
 
 @app.post("/api/auth/login")
 async def auth_login(request:Request,b:dict):
