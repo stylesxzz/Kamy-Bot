@@ -143,6 +143,26 @@ Atalhos incluídos:
 - Linux/macOS: \`./start.sh\`
 - Windows: execute \`start.bat\` no Explorador ou no Prompt de Comando.
 
+## Publicação na Internet com HTTPS (Caddy)
+
+A publicação pública deve ficar atrás de um proxy HTTPS. O Kamy continua escutando somente em `127.0.0.1:8000`; não abra a porta 8000 no firewall.
+
+1. Configure um servidor Linux com Docker e um domínio cujo DNS A/AAAA aponte para o servidor.
+2. Libere somente TCP 80 e 443 no firewall; mantenha 8000 fechado para a Internet.
+3. No `.env`, defina `KAMY_DOMAIN`, `KAMY_ADMIN_USERNAME`, `KAMY_ADMIN_PASSWORD` (16+ caracteres), `KAMY_SESSION_SECRET` (32+ caracteres aleatórios), `KAMY_MASTER_KEY` e `KAMY_COOKIE_SECURE=1`.
+4. Inicie o Kamy com `docker compose up --build -d`.
+5. Instale o Caddy no host e copie `Caddyfile.example` para `Caddyfile`. O Caddy obtém e renova certificados TLS automaticamente.
+6. Exporte a variável do domínio e inicie o proxy:
+
+```bash
+export KAMY_DOMAIN=seu-dominio.com
+sudo --preserve-env=KAMY_DOMAIN caddy run --config ./Caddyfile
+```
+
+Em produção, execute Caddy como serviço systemd e mantenha o arquivo de configuração protegido. Configure DNS, firewall, backup do volume Docker e backup separado das chaves. Não use um domínio de exemplo nem compartilhe o arquivo `.env`.
+
+O proxy de exemplo aponta para `127.0.0.1:8000`, portanto Caddy deve rodar no mesmo host do Docker. Para proxy em outro container/host, use uma rede privada e ajuste o upstream sem publicar a porta do Kamy publicamente.
+
 ## Comandos de operação Docker
 
 Executar / reconstruir:
