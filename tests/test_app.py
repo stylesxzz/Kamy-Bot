@@ -81,3 +81,19 @@ def test_workspace_path_traversal_is_rejected(client):
     _, kamy = client
     with pytest.raises(Exception):
         kamy.safe_path("nova", "../outside.txt")
+
+
+def test_provider_api_keys_are_encrypted_at_rest(client, monkeypatch):
+    http, kamy = client
+    payload = {"name": "Secure", "role": "Analyst", "api_key": "secret-provider-key"}
+    monkeypatch.setenv("KAMY_MASTER_KEY", "")
+    assert http.post("/api/agents", json=payload).status_code == 503
+
+    from cryptography.fernet import Fernet
+    monkeypatch.setenv("KAMY_MASTER_KEY", Fernet.generate_key().decode())
+    created = http.post("/api/agents", json=payload)
+    assert created.status_code == 200
+    with kamy.conn() as db:
+        stored = db.execute("SELECT api_key FROM agents WHERE id=?", (created.json()["id"],)).fetchone()["api_key"]
+    assert stored.startswith("fernet:")
+    assert "secret-provider-key" not in stored
