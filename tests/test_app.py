@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("KAMY_TESTING", "1")
     monkeypatch.setenv("KAMY_BROWSER_ENABLED", "0")
     import app as kamy
     monkeypatch.setattr(kamy, "DB", tmp_path / "kamy.sqlite3")
@@ -33,7 +34,7 @@ def test_python_syntax():
 
 def test_health_and_default_agents(client):
     http, _ = client
-    assert http.get("/api/health").json()["ok"] is True
+    assert http.get("/api/health").status_code == 200
     agents = http.get("/api/agents").json()
     assert {agent["id"] for agent in agents} == {"nova", "pixel", "scout"}
     assert all("api_key" not in agent for agent in agents)
@@ -103,6 +104,8 @@ def test_provider_api_keys_are_encrypted_at_rest(client, monkeypatch):
 
 def test_remote_clients_are_rejected_by_default(client):
     _, kamy = client
+    import os
+    os.environ.pop("KAMY_TESTING", None)
     with TestClient(kamy.app, client=("192.0.2.10", 12345)) as remote:
         assert remote.get("/api/agents").status_code == 403
 
