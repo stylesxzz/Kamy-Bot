@@ -396,6 +396,238 @@ Kamy-Bot/
 └── .github/workflows/ci.yml
 ```
 
+
+## Kamy como assistente pessoal: funcionamento e modos de execução
+
+Esta seção diferencia o que existe no repositório hoje do que é a arquitetura planejada para transformar o Kamy em um agente pessoal capaz de operar o ambiente do usuário.
+
+### O que o Kamy faz hoje
+
+Na versão atual, o Kamy é uma aplicação local com interface web e backend Python/FastAPI. Ele oferece:
+
+- Conversas com coworkers de IA, cada um com seu workspace.
+- Conexão com um provedor compatível com a API OpenAI, incluindo NVIDIA NIM.
+- Skills em Markdown para orientar o comportamento dos coworkers.
+- Conexão com servidores MCP por Streamable HTTP ou STDIO, descoberta de ferramentas e permissões por ferramenta.
+- Fluxo de aprovação para chamadas MCP que exigem autorização.
+- Integração Finance com Binance Spot para consultas e operações suportadas pelo módulo.
+- Kamy Intel para organizar investigações e registrar evidências e fontes.
+- Persistência local em SQLite e arquivos no diretório de dados.
+
+O Kamy atual **não é ainda um agente de controle completo do computador**. A automação Playwright disponível está vinculada ao modo Docker/configuração de browser do projeto. O modo Python nativo e Termux não oferece, por si só, controle geral de mouse, teclado, tela ou aplicativos do sistema.
+
+### Como uma tarefa deverá funcionar no modo agente pessoal
+
+A arquitetura-alvo é composta por quatro partes:
+
+1. **Kamy Core:** recebe seu pedido, interpreta a intenção, planeja etapas, seleciona coworkers, Skills e ferramentas, mantém o histórico e acompanha a execução.
+2. **Kamy Desktop Agent:** processo nativo instalado no computador. Com autorização do usuário, poderá observar a tela, abrir aplicativos, interagir com mouse e teclado, trabalhar com arquivos, terminal e navegador.
+3. **Kamy Mobile Companion:** aplicativo Android complementar. Poderá usar recursos do Android, como Accessibility Service, apenas depois de o usuário instalar o app e conceder as permissões nas configurações do sistema.
+4. **Conectores:** MCP, APIs oficiais e automação de navegador para serviços específicos, como e-mail e mensageria.
+
+Fluxo conceitual:
+
+```mermaid
+flowchart TD
+  U[Você dá uma ordem] --> K[Kamy Core]
+  K --> P[Planejamento e seleção de ferramentas]
+  P --> A{Qual ambiente?}
+  A --> D[Agente Desktop nativo]
+  A --> M[Companion Android]
+  A --> B[Navegador / Playwright]
+  A --> C[APIs e servidores MCP]
+  D --> R[Executa e observa o resultado]
+  M --> R
+  B --> R
+  C --> R
+  R --> V[Validação da tarefa]
+  V --> H[Relatório para você]
+```
+
+Exemplo de fluxo futuro: ao pedir para preparar um e-mail, o Kamy identifica o destinatário e o conteúdo, abre o conector de e-mail autorizado ou o navegador autenticado, prepara um rascunho, mostra o resultado e solicita sua confirmação antes de enviar. Depois, verifica o resultado e informa o que ocorreu.
+
+### Docker não é o agente do computador
+
+Docker executa processos dentro de um ambiente isolado. Isso é útil para dependências, serviços e testes, mas um container não ganha automaticamente acesso à área de trabalho, aos aplicativos, aos arquivos pessoais ou à sessão autenticada do navegador do host.
+
+Por isso, a arquitetura de controle do computador deve usar um **agente nativo no host**, iniciado pelo próprio usuário e conectado ao Core por um canal local autenticado. Docker pode continuar como opção para executar o Core ou serviços auxiliares, mas não deve ser obrigatório nem ser confundido com o agente de desktop.
+
+Não é recomendado resolver isso montando o socket do Docker, executando o container como root ou expondo uma API de controle remoto sem autenticação. Essas opções podem entregar privilégios excessivos.
+
+### E-mail, WhatsApp e navegador
+
+- **E-mail:** a integração preferencial é por APIs oficiais, como Gmail API ou Microsoft Graph, usando OAuth e escopos mínimos. Automação do navegador pode ser uma alternativa quando suportada e autorizada.
+- **WhatsApp:** a automação da interface do WhatsApp Web depende de uma sessão que o próprio usuário autenticou e das limitações da interface. A WhatsApp Business Platform é voltada a contas e casos de uso Business; não é uma API genérica para ler todo o histórico de qualquer conta pessoal.
+- **Navegador:** Playwright pode automatizar páginas compatíveis. Sessões autenticadas devem ser armazenadas com cuidado e nunca compartilhadas com terceiros.
+- **Aplicativos locais:** o controle de aplicativos exige um agente nativo e permissões específicas de cada sistema operacional. Não está disponível de forma universal na versão atual.
+
+### Permissões e confirmações
+
+O objetivo é oferecer acesso amplo **somente ao que o usuário conceder**, com transparência e possibilidade de revogação.
+
+| Tipo de ação | Política recomendada |
+|---|---|
+| Consultar páginas, pesquisar e ler dados autorizados | Pode ser automático após configurar a integração |
+| Abrir aplicativos e preparar rascunhos | Conforme permissões configuradas |
+| Criar ou editar arquivos | Respeitar diretórios autorizados e manter opção de revisão |
+| Enviar e-mail ou mensagem, publicar ou enviar formulários | Pedir confirmação antes do efeito externo |
+| Compras, ordens financeiras ou transferências | Confirmação explícita e revisão dos detalhes |
+| Excluir arquivos importantes ou executar comandos privilegiados | Confirmação reforçada; nunca ocultar o comando |
+
+O usuário continua responsável por conceder permissões no sistema operacional e nos serviços conectados. O Kamy não deve contornar telas de consentimento, autenticação, bloqueios do sistema ou controles de segurança.
+
+### Estado real das funcionalidades
+
+| Recurso | Situação nesta versão |
+|---|---|
+| Core local FastAPI e interface web | Implementado |
+| SQLite, workspaces e coworkers | Implementado |
+| NVIDIA NIM | Integração disponível, requer credenciais |
+| Skills Markdown | Importação e gerenciamento disponíveis; não executa código da Skill |
+| MCP Streamable HTTP e STDIO | Runtime disponível com descoberta e permissões |
+| OAuth para conexões MCP HTTP | Fluxo disponível; depende da configuração do provedor |
+| Finance / Binance Spot | Integração disponível dentro dos endpoints implementados |
+| Kamy Intel | Casos e registro de evidências disponíveis; busca depende de provedor/conector |
+| Playwright no modo Docker | Disponível conforme configuração do projeto |
+| Controle geral de mouse, teclado e tela do host | **Ainda não implementado** |
+| Agente Desktop nativo para Windows/Linux/macOS | **Ainda não implementado** |
+| Aplicativo Companion Android com Accessibility Service | **Ainda não implementado** |
+| Instalador/CLI NPM `npx kamy-bot` | **Ainda não implementado nem publicado no NPM** |
+
+## Comandos de referência
+
+Os comandos abaixo correspondem aos arquivos e scripts existentes neste repositório. Eles não dependem de um pacote NPM.
+
+### Clonar e entrar no projeto
+
+**Linux, macOS e Termux:**
+
+```bash
+git clone https://github.com/stylesxzz/Kamy-Bot.git
+cd Kamy-Bot
+```
+
+**Windows PowerShell:**
+
+```powershell
+git clone https://github.com/stylesxzz/Kamy-Bot.git
+Set-Location Kamy-Bot
+```
+
+### Instalar e iniciar — Linux/macOS
+
+```bash
+bash scripts/install.sh
+bash scripts/start.sh
+```
+
+A interface nativa abre em `http://127.0.0.1:8765`. O instalador configura o ambiente Python local, dependências e arquivo `.env`.
+
+### Instalar e iniciar — Windows
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+.\scripts\start.ps1
+```
+
+A interface nativa abre em `http://127.0.0.1:8765`.
+
+### Instalar e iniciar — Android/Termux
+
+```bash
+pkg update -y && pkg upgrade -y
+pkg install -y git python clang rust
+git clone https://github.com/stylesxzz/Kamy-Bot.git
+cd Kamy-Bot
+bash scripts/install-termux.sh
+bash scripts/start.sh
+```
+
+Abra `http://127.0.0.1:8765` no navegador do Android. O Termux precisa continuar executando o processo. Para interromper, pressione `CTRL+C` no terminal.
+
+### Instalar e iniciar — Docker
+
+Depois de instalar Docker Engine e o plugin Compose (ou Docker Desktop):
+
+```bash
+git clone https://github.com/stylesxzz/Kamy-Bot.git
+cd Kamy-Bot
+cp .env.example .env
+docker compose up --build -d
+docker compose ps
+```
+
+Abra `http://127.0.0.1:8000`.
+
+No PowerShell, use `Copy-Item .env.example .env` no lugar de `cp`.
+
+### Diagnóstico e manutenção
+
+**Docker:**
+
+```bash
+docker compose ps
+docker compose logs --tail=200 kamy-bot
+docker compose restart kamy-bot
+docker compose config -q
+```
+
+**Python nativo:**
+
+```bash
+python --version
+python -m compileall -q app.py extensions.py security.py tests
+pytest -q
+node --check static/app.js
+node --check static/extensions.js
+```
+
+**Atualizar código — Linux/macOS/Termux:**
+
+```bash
+git pull
+bash scripts/install.sh
+bash scripts/start.sh
+```
+
+No Termux, rode `bash scripts/install-termux.sh` em vez de `scripts/install.sh`.
+
+**Atualizar código — Windows PowerShell:**
+
+```powershell
+git pull
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+.\scripts\start.ps1
+```
+
+**Atualizar Docker:**
+
+```bash
+git pull
+docker compose up --build -d
+docker compose logs -f kamy-bot
+```
+
+**Parar Docker:**
+
+```bash
+docker compose down
+```
+
+Atenção: `docker compose down -v` remove volumes e pode apagar os dados persistentes. Não use como comando de atualização.
+
+### Sobre o comando NPM de instalação
+
+O comando desejado para uma futura distribuição é:
+
+```bash
+npx kamy-bot
+```
+
+Esse comando ainda não pode ser usado: o repositório não possui atualmente o pacote/CLI NPM correspondente e o pacote não foi publicado no registro NPM. A documentação não apresenta esse comando como funcional até que sejam criados o `package.json`, o executável CLI, o processo de instalação multiplataforma, os testes e a publicação do pacote.
+
+Mesmo quando existir, o CLI NPM poderá instalar e iniciar componentes compatíveis, mas não poderá conceder sozinho permissões de Acessibilidade no Android ou permissões de automação no macOS/Windows/Linux. Essas autorizações continuam sendo feitas pelo usuário no sistema operacional.
+
 ## Licença
 
 Licença MIT. Consulte [LICENSE](LICENSE).
