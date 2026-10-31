@@ -34,3 +34,5 @@ jobs:
         run: pytest -q
       - name: Check frontend JavaScript syntax
         run: node --check static/app.js
+      - name: Validate Docker Compose configuration
+        run: docker compose config -q
