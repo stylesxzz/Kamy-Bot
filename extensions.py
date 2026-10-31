@@ -376,3 +376,11 @@ def queue_agent_mcp_proposal(function_name, arguments):
         ident=str(uuid.uuid4())
         c.execute("INSERT INTO mcp_tool_proposals VALUES(?,?,?,?,?,?,?,?)",(ident,selected["server_id"],selected["tool_name"],json.dumps(arguments),"pending_review",None,time.time(),None))
     return {"id":ident,"server_id":selected["server_id"],"tool_name":selected["tool_name"]}
+
+
+@router.post("/mcp/proposals/{proposal_id}/reject")
+def mcp_reject(proposal_id:str):
+    with db() as c:
+        cur=c.execute("UPDATE mcp_tool_proposals SET status='rejected',decided=? WHERE id=? AND status='pending_review'",(time.time(),proposal_id))
+        if not cur.rowcount:raise HTTPException(409,"MCP proposal not found or already processed.")
+    return {"id":proposal_id,"status":"rejected"}
