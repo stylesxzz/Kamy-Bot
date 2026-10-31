@@ -38,3 +38,85 @@ def test_remote_mcp_requires_https(ext_client):
 def test_financial_execution_is_disabled(ext_client):
     r=ext_client.post("/api/extensions/finance/order-proposals/not-a-real-id/execute")
     assert r.status_code==501
+
+
+def test_oauth_secret_requires_master_key(ext_client):
+    payload = {
+        "name": "Provider",
+        "authorization_url": "https://auth.example.com/authorize",
+        "token_url": "https://auth.example.com/token",
+        "client_id": "client-id",
+        "client_secret": "never-store-plaintext",
+        "redirect_uri": "https://app.example.com/api/extensions/oauth/callback",
+        "scopes": ["profile"],
+    }
+    response = ext_client.post("/api/extensions/oauth/providers", json=payload)
+    assert response.status_code == 503
+    assert ext_client.get("/api/extensions/oauth/providers").json() == []
+
+
+def test_oauth_provider_rejects_insecure_urls(ext_client):
+    payload = {
+        "name": "Insecure",
+        "authorization_url": "http://auth.example.com/authorize",
+        "token_url": "https://auth.example.com/token",
+        "client_id": "client-id",
+        "redirect_uri": "https://app.example.com/callback",
+    }
+    assert ext_client.post("/api/extensions/oauth/providers", json=payload).status_code == 400
+
+
+def test_finance_proposal_requires_provider_and_never_executes(ext_client):
+    provider = ext_client.post("/api/extensions/oauth/providers", json={
+        "name": "Broker",
+        "authorization_url": "https://broker.example.com/authorize",
+        "token_url": "https://broker.example.com/token",
+        "client_id": "client-id",
+        "redirect_uri": "https://app.example.com/api/extensions/oauth/callback",
+    })
+    assert provider.status_code == 200
+    proposal = ext_client.post("/api/extensions/finance/order-proposals", json={
+        "provider_id": provider.json()["id"],
+        "asset": "IVVB11",
+        "side": "buy",
+        "quantity": 1,
+        "order_type": "market",
+    })
+    assert proposal.status_code == 200
+    proposal_id = proposal.json()["id"]
+    assert ext_client.post(f"/api/extensions/finance/order-proposals/{proposal_id}/approve").json()["status"] == "approved_not_executed"
+    assert ext_client.post(f"/api/extensions/finance/order-proposals/{proposal_id}/execute").status_code == 501
+
+
+def test_intel_only_accepts_https_evidence(ext_client):
+    case = ext_client.post("/api/extensions/intel/cases", json={
+        "query": "Example research",
+        "purpose": "Validate publicly available information.",
+    })
+    assert case.status_code == 200
+    cid = case.json()["id"]
+    bad = ext_client.post(f"/api/extensions/intel/cases/{cid}/evidence", json={
+        "url": "http://example.com/source",
+        "title": "Insecure source",
+    })
+    assert bad.status_code == 400
+    good = ext_client.post(f"/api/extensions/intel/cases/{cid}/evidence", json={
+        "url": "https://example.com/source",
+        "title": "Public source",
+        "snippet": "A short excerpt.",
+        "source_type": "public_web",
+    })
+    assert good.status_code == 200
+
+
+def test_mcp_can_be_disabled_without_launching_process(ext_client):
+    created = ext_client.post("/api/extensions/mcp", json={
+        "name": "Stored only",
+        "transport": "stdio",
+        "command": "not-launched",
+        "args": [],
+    })
+    sid = created.json()["id"]
+    disabled = ext_client.post(f"/api/extensions/mcp/{sid}/disable")
+    assert disabled.status_code == 200
+    assert disabled.json()["status"] == "disabled"
