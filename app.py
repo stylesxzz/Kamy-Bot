@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, Response
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 try:
@@ -18,7 +18,23 @@ ROOT=Path(__file__).parent
 DATA=Path(os.getenv("KAMY_DATA_DIR","./data")); WORK=DATA/"workspaces"; DB=DATA/"kamy.sqlite3"
 DATA.mkdir(parents=True,exist_ok=True); WORK.mkdir(parents=True,exist_ok=True)
 NVIDIA_URL="https://integrate.api.nvidia.com/v1/chat/completions"
-app=FastAPI(title="Kamy Bot",version="1.0.0")
+app=FastAPI(title="Kamy Bot",version="1.1.0",docs_url=None,redoc_url=None,openapi_url=None)
+from security import SecurityMiddleware, login as security_login, apply_session, clear_session
+app.add_middleware(SecurityMiddleware)
+
+@app.post("/api/auth/login")
+async def auth_login(request:Request,b:dict):
+ username=str(b.get("username",""))[:120];password=str(b.get("password",""))[:512]
+ session,error=security_login(username,password,request.client.host if request.client else "unknown")
+ if error:raise HTTPException(503 if "KAMY_" in error else 401,error)
+ response=JSONResponse({"authenticated":True,"user":username})
+ return apply_session(response,session)
+
+@app.get("/api/auth/me")
+def auth_me(request:Request):return {"authenticated":True,"user":request.state.kamy_user}
+
+@app.post("/api/auth/logout")
+def auth_logout():return clear_session(JSONResponse({"authenticated":False}))
 app.mount("/assets",StaticFiles(directory=str(ROOT/"assets")),name="assets")
 app.mount("/static",StaticFiles(directory=str(ROOT/"static")),name="static")
 DEFAULT=[
