@@ -1,5 +1,6 @@
 """Kamy Bot extension control plane. Downloaded skill code, arbitrary MCP commands and financial orders are never executed automatically."""
 import base64, hashlib, json, os, secrets, sqlite3, time, uuid
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
 import httpx
@@ -10,8 +11,17 @@ from pydantic import BaseModel, Field
 DATA=Path(os.getenv("KAMY_DATA_DIR","./data")); DATA.mkdir(parents=True,exist_ok=True)
 DB=DATA/"kamy_extensions.sqlite3"
 router=APIRouter(prefix="/api/extensions",tags=["Kamy Extensions"])
+@contextmanager
 def db():
- c=sqlite3.connect(DB,timeout=15); c.row_factory=sqlite3.Row; c.execute("PRAGMA busy_timeout=15000"); return c
+ c=sqlite3.connect(DB,timeout=15); c.row_factory=sqlite3.Row; c.execute("PRAGMA busy_timeout=15000")
+ try:
+  yield c
+  c.commit()
+ except Exception:
+  c.rollback()
+  raise
+ finally:
+  c.close()
 def init_db():
  with db() as c:
   c.executescript("""
