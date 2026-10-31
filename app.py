@@ -1,4 +1,5 @@
 import os, sqlite3, uuid, json, re
+from contextlib import contextmanager
 from pathlib import Path
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -7,7 +8,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from playwright.async_api import async_playwright
+try:
+ from playwright.async_api import async_playwright
+except ImportError:
+ async_playwright=None
 
 ROOT=Path(__file__).parent
 DATA=Path(os.getenv("KAMY_DATA_DIR","./data")); WORK=DATA/"workspaces"; DB=DATA/"kamy.sqlite3"
@@ -21,8 +25,16 @@ DEFAULT=[
  {"id":"pixel","name":"PIXEL","role":"Developer coworker","description":"Creates and reads project files inside its private workspace.","domains":["example.com"],"tools":["file.write","file.read"]},
  {"id":"scout","name":"SCOUT","role":"Browser coworker","description":"Visits approved pages and captures browser evidence.","domains":["example.com"],"tools":["browser.goto","browser.screenshot","file.write","file.read"]}]
 def now(): return datetime.now(timezone.utc).isoformat()
+@contextmanager
 def conn():
- c=sqlite3.connect(DB); c.row_factory=sqlite3.Row; return c
+ c=sqlite3.connect(DB,timeout=15); c.row_factory=sqlite3.Row
+ try:
+  c.execute('PRAGMA busy_timeout=15000')
+  yield c
+  c.commit()
+ except Exception:
+  c.rollback(); raise
+ finally:c.close()
 def init():
  with conn() as c:
   c.executescript("""CREATE TABLE IF NOT EXISTS agents(id TEXT PRIMARY KEY,name TEXT,role TEXT,description TEXT,model TEXT,api_key TEXT,domains TEXT,tools TEXT,created TEXT);
@@ -43,20 +55,28 @@ def safe_path(aid,rel):
  return target
 browser_engine=None; browser=None; contexts={}; pages={}
 async def ensure_browser(aid):
+ if not async_playwright or os.getenv('KAMY_BROWSER_ENABLED','1').lower() not in ('1','true','yes','on') or browser is None:
+  raise HTTPException(503,'Browser tools are disabled on this installation.')
  if aid not in contexts:
   contexts[aid]=await browser.new_context(viewport={"width":1280,"height":800})
   pages[aid]=await contexts[aid].new_page()
 @app.on_event("startup")
 async def startup():
  global browser_engine,browser
- init(); browser_engine=await async_playwright().start(); browser=await browser_engine.chromium.launch(headless=True,args=["--no-sandbox"])
+ init()
  with conn() as c: ids=[r["id"] for r in c.execute("SELECT id FROM agents")]
- for aid in ids:(WORK/aid).mkdir(parents=True,exist_ok=True); await ensure_browser(aid)
+ for aid in ids:(WORK/aid).mkdir(parents=True,exist_ok=True)
+ browser_enabled=os.getenv('KAMY_BROWSER_ENABLED','1').lower() in ('1','true','yes','on')
+ if browser_enabled and async_playwright:
+  browser_engine=await async_playwright().start()
+  browser=await browser_engine.chromium.launch(headless=True,args=['--no-sandbox'])
+  for aid in ids: await ensure_browser(aid)
 @app.on_event("shutdown")
 async def shutdown():
- for c in contexts.values():await c.close()
- if browser:await browser.close()
- if browser_engine:await browser_engine.stop()
+ for context in list(contexts.values()): await context.close()
+ contexts.clear(); pages.clear()
+ if browser: await browser.close()
+ if browser_engine: await browser_engine.stop()
 @app.get("/",response_class=HTMLResponse)
 def home():return (ROOT/"static/index.html").read_text()
 @app.get("/api/health")
@@ -104,7 +124,7 @@ async def chat(aid:str,b:Chat):
    async with httpx.AsyncClient(timeout=90) as client:
     r=await client.post(NVIDIA_URL,headers={"Authorization":"Bearer "+a["api_key"],"Content-Type":"application/json"},json={"model":a["model"],"messages":[{"role":"system","content":"Você é um coworker do Kamy Bot. Responda em português. Não afirme que realizou ferramentas; as ações precisam ser aprovadas pelo usuário."}]+hist,"temperature":0.5,"max_tokens":1200})
     r.raise_for_status();reply=r.json()["choices"][0]["message"]["content"]
-  except Exception as e:reply="Falha na NVIDIA API. Confira a chave, o modelo e a disponibilidade do endpoint."
+  except Exception:reply="Falha na NVIDIA API. Confira a chave, o modelo e a disponibilidade do endpoint."
  with conn() as c:c.execute("INSERT INTO messages VALUES(?,?,?,?,?)",(str(uuid.uuid4()),aid,"assistant",reply,now()))
  u=re.search(r"https?://[^\s]+",msg)
  if u and any(x in msg.lower() for x in ["abra","abrir","visite","navegue","open"]):audit(aid,"browser.goto",{"url":u.group(0).rstrip(".,)")})
