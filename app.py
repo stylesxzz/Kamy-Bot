@@ -4,8 +4,9 @@ from pathlib import Path
 from datetime import datetime, timezone
 from urllib.parse import urlparse
 import httpx
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, Response
+from cryptography.fernet import Fernet, InvalidToken
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 try:
@@ -17,7 +18,11 @@ ROOT=Path(__file__).parent
 DATA=Path(os.getenv("KAMY_DATA_DIR","./data")); WORK=DATA/"workspaces"; DB=DATA/"kamy.sqlite3"
 DATA.mkdir(parents=True,exist_ok=True); WORK.mkdir(parents=True,exist_ok=True)
 NVIDIA_URL="https://integrate.api.nvidia.com/v1/chat/completions"
-app=FastAPI(title="Kamy Bot",version="1.0.0")
+app=FastAPI(title="Kamy Bot",version="1.1.0",docs_url=None,redoc_url=None,openapi_url=None)
+from security import LocalOnlyMiddleware, SecurityHeadersMiddleware
+app.add_middleware(LocalOnlyMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.mount("/assets",StaticFiles(directory=str(ROOT/"assets")),name="assets")
 app.mount("/static",StaticFiles(directory=str(ROOT/"static")),name="static")
 DEFAULT=[
@@ -25,6 +30,25 @@ DEFAULT=[
  {"id":"pixel","name":"PIXEL","role":"Developer coworker","description":"Creates and reads project files inside its private workspace.","domains":["example.com"],"tools":["file.write","file.read"]},
  {"id":"scout","name":"SCOUT","role":"Browser coworker","description":"Visits approved pages and captures browser evidence.","domains":["example.com"],"tools":["browser.goto","browser.screenshot","file.write","file.read"]}]
 def now(): return datetime.now(timezone.utc).isoformat()
+def secret_cipher():
+ key=os.getenv("KAMY_MASTER_KEY","").strip()
+ if not key: raise HTTPException(503,"Configure KAMY_MASTER_KEY before saving API credentials.")
+ try: return Fernet(key.encode())
+ except Exception: raise HTTPException(503,"KAMY_MASTER_KEY inválida. Gere uma chave Fernet válida.")
+def protect_secret(value):
+ if not value:return None
+ return "fernet:"+secret_cipher().encrypt(value.encode()).decode()
+def reveal_secret(value):
+ if not value:return None
+ if not value.startswith("fernet:"):return value
+ try:return secret_cipher().decrypt(value[8:].encode()).decode()
+ except InvalidToken:raise HTTPException(503,"Não foi possível descriptografar a chave do coworker. Verifique KAMY_MASTER_KEY.")
+def migrate_agent_secrets():
+ if not os.getenv("KAMY_MASTER_KEY","").strip():return
+ cipher=secret_cipher()
+ with conn() as c:
+  for row in c.execute("SELECT id,api_key FROM agents WHERE api_key IS NOT NULL AND api_key NOT LIKE 'fernet:%'").fetchall():
+   c.execute("UPDATE agents SET api_key=? WHERE id=?",("fernet:"+cipher.encrypt(row["api_key"].encode()).decode(),row["id"]))
 @contextmanager
 def conn():
  c=sqlite3.connect(DB,timeout=15); c.row_factory=sqlite3.Row
@@ -42,6 +66,7 @@ def init():
   CREATE TABLE IF NOT EXISTS actions(id TEXT PRIMARY KEY,agent_id TEXT,kind TEXT,payload TEXT,status TEXT,decision TEXT,result TEXT,created TEXT,finished TEXT);""")
   if not c.execute("SELECT 1 FROM agents LIMIT 1").fetchone():
    for a in DEFAULT:c.execute("INSERT INTO agents VALUES(?,?,?,?,?,?,?,?,?)",(a["id"],a["name"],a["role"],a["description"],"meta/llama-3.3-70b-instruct",None,json.dumps(a["domains"]),json.dumps(a["tools"]),now()))
+ migrate_agent_secrets()
 def agent(aid):
  with conn() as c:r=c.execute("SELECT * FROM agents WHERE id=?",(aid,)).fetchone()
  if not r:raise HTTPException(404,"Coworker not found")
@@ -91,13 +116,14 @@ class AgentIn(BaseModel):
 @app.post("/api/agents")
 def add_agent(b:AgentIn):
  if b.api_key and len(b.api_key)>512: raise HTTPException(400,'NVIDIA API key is too long')
+ encrypted_key=protect_secret(b.api_key) if b.api_key else None
  if any(not re.fullmatch(r'[a-zA-Z0-9.-]+',d) for d in b.domains): raise HTTPException(400,'Invalid domain')
  if any(t not in {'browser.goto','browser.screenshot','file.write','file.read'} for t in b.tools): raise HTTPException(400,'Unknown tool')
  aid=re.sub("[^a-z0-9-]","-",b.name.lower()).strip("-")[:24] or uuid.uuid4().hex[:8]
  if any(t not in {"browser.goto","browser.screenshot","file.write","file.read"} for t in b.tools):raise HTTPException(400,"Unknown tool")
  with conn() as c:
   if c.execute("SELECT 1 FROM agents WHERE id=?",(aid,)).fetchone():aid+="-"+uuid.uuid4().hex[:4]
-  c.execute("INSERT INTO agents VALUES(?,?,?,?,?,?,?,?,?)",(aid,b.name,b.role,b.description,b.model,b.api_key,json.dumps(b.domains),json.dumps(b.tools),now()))
+  c.execute("INSERT INTO agents VALUES(?,?,?,?,?,?,?,?,?)",(aid,b.name,b.role,b.description,b.model,encrypted_key,json.dumps(b.domains),json.dumps(b.tools),now()))
  (WORK/aid).mkdir(parents=True,exist_ok=True)
  return {"id":aid}
 class Policy(BaseModel):
@@ -122,18 +148,35 @@ async def chat(aid:str,b:Chat):
   c.execute("INSERT INTO messages VALUES(?,?,?,?,?)",(str(uuid.uuid4()),aid,"user",msg,now()))
   hist=[dict(x) for x in c.execute("SELECT role,content FROM messages WHERE agent_id=? ORDER BY created",(aid,))]
  reply="Demo mode ativo. Configure sua chave NVIDIA API para conversar com o modelo. Posso propor navegação e operações de arquivo, sempre aguardando sua aprovação."
+ mcp_proposals=[]
  if a["api_key"]:
   try:
+   ext=__import__("extensions")
+   available_tools=ext.enabled_mcp_tools()
+   request_payload={"model":a["model"],"messages":[{"role":"system","content":"Você é um coworker do Kamy Bot. Responda em português. Não afirme que realizou ferramentas; toda chamada MCP precisa de autorização explícita do usuário. Nunca tente contornar permissões.\\n"+ext.active_skill_instructions()}]+hist,"temperature":0.5,"max_tokens":1200}
+   if available_tools:request_payload["tools"]=available_tools;request_payload["tool_choice"]="auto"
    async with httpx.AsyncClient(timeout=90) as client:
-    r=await client.post(NVIDIA_URL,headers={"Authorization":"Bearer "+a["api_key"],"Content-Type":"application/json"},json={"model":a["model"],"messages":[{"role":"system","content":"Você é um coworker do Kamy Bot. Responda em português. Não afirme que realizou ferramentas; as ações precisam ser aprovadas pelo usuário."}]+hist,"temperature":0.5,"max_tokens":1200})
-    r.raise_for_status();reply=r.json()["choices"][0]["message"]["content"]
+    r=await client.post(NVIDIA_URL,headers={"Authorization":"Bearer "+reveal_secret(a["api_key"]),"Content-Type":"application/json"},json=request_payload)
+    r.raise_for_status();model_message=r.json()["choices"][0]["message"]
+   reply=model_message.get("content") or ""
+   for call in model_message.get("tool_calls",[]):
+    try:
+     fn=call.get("function",{});args=json.loads(fn.get("arguments","{}"))
+     proposal=ext.queue_agent_mcp_proposal(fn.get("name",""),args)
+     mcp_proposals.append(proposal)
+    except Exception:
+     continue
+   if mcp_proposals:
+    summary=", ".join(x["tool_name"]+" ("+x["id"][:8]+")" for x in mcp_proposals)
+    reply=(reply+"\\n\\n" if reply else "")+"Solicitei aprovação para: "+summary+". Nenhuma ferramenta foi executada ainda. Revise em Extensions → MCP."
+   if not reply:reply="O modelo não retornou conteúdo. Verifique a configuração do provedor."
   except Exception:reply="Falha na NVIDIA API. Confira a chave, o modelo e a disponibilidade do endpoint."
  with conn() as c:c.execute("INSERT INTO messages VALUES(?,?,?,?,?)",(str(uuid.uuid4()),aid,"assistant",reply,now()))
  u=re.search(r"https?://[^\s]+",msg)
  if u and any(x in msg.lower() for x in ["abra","abrir","visite","navegue","open"]):audit(aid,"browser.goto",{"url":u.group(0).rstrip(".,)")})
  f=re.search(r"(?:salve|crie|escreva)\s+(?:um arquivo\s+)?([\w./-]+\.[\w]+)",msg,re.I)
  if f:audit(aid,"file.write",{"path":f.group(1),"content":"Created by Kamy Bot coworker.\n"+msg})
- return {"reply":reply}
+ return {"reply":reply,"mcp_proposals":mcp_proposals}
 @app.get("/api/actions")
 def actions(agent_id:str|None=None,limit:int=100):
  with conn() as c:
@@ -145,13 +188,16 @@ def actions(agent_id:str|None=None,limit:int=100):
 async def decide(ident:str,b:dict):
  decision=b.get("decision")
  if decision not in ("approve","reject"):raise HTTPException(400,"Invalid decision")
- with conn() as c:r=c.execute("SELECT * FROM actions WHERE id=?",(ident,)).fetchone()
- if not r:raise HTTPException(404,"Action not found")
- if r["status"]!="pending":raise HTTPException(409,"Already decided")
- payload=json.loads(r["payload"]); a=agent(r["agent_id"])
+ # Atomically claim the pending action so concurrent requests cannot execute it twice.
+ with conn() as c:
+  r=c.execute("SELECT * FROM actions WHERE id=?",(ident,)).fetchone()
+  if not r:raise HTTPException(404,"Action not found")
+  cur=c.execute("UPDATE actions SET status='executing',decision=? WHERE id=? AND status='pending'",(decision,ident))
+  if not cur.rowcount:raise HTTPException(409,"Action is already being processed or has been decided")
  if decision=="reject":
-  with conn() as c:c.execute("UPDATE actions SET status='rejected',decision=?,result=?,finished=? WHERE id=?",(decision,json.dumps({"rejected":True}),now(),ident))
+  with conn() as c:c.execute("UPDATE actions SET status='rejected',result=?,finished=? WHERE id=? AND status='executing'",(json.dumps({"rejected":True}),now(),ident))
   return {"status":"rejected"}
+ payload=json.loads(r["payload"]); a=agent(r["agent_id"])
  try:
   tools=json.loads(a["tools"]); domains=json.loads(a["domains"]); kind=r["kind"]; result={}
   if kind not in tools:raise PermissionError("Tool not allowed")
@@ -168,10 +214,10 @@ async def decide(ident:str,b:dict):
    await ensure_browser(r["agent_id"]);result={"screenshot":True}
    await pages[r["agent_id"]].screenshot(path=str(WORK/r["agent_id"]/"latest.png"))
   else:raise PermissionError("Unknown action")
-  with conn() as c:c.execute("UPDATE actions SET status='executed',decision='approve',result=?,finished=? WHERE id=?",(json.dumps(result),now(),ident))
+  with conn() as c:c.execute("UPDATE actions SET status='executed',decision='approve',result=?,finished=? WHERE id=? AND status='executing'",(json.dumps(result),now(),ident))
   return {"status":"executed","result":result}
  except Exception as e:
-  with conn() as c:c.execute("UPDATE actions SET status='blocked',decision='approve',result=?,finished=? WHERE id=?",(json.dumps({"error":str(e)}),now(),ident))
+  with conn() as c:c.execute("UPDATE actions SET status='blocked',decision='approve',result=?,finished=? WHERE id=? AND status='executing'",(json.dumps({"error":str(e)}),now(),ident))
   raise HTTPException(403,"Blocked by policy: "+str(e))
 @app.get("/api/browser/{aid}/screenshot")
 async def shot(aid:str):
@@ -179,3 +225,7 @@ async def shot(aid:str):
 @app.get("/api/workspace/{aid}")
 def workspace(aid:str):
  agent(aid);return [{"path":str(p.relative_to(WORK/aid)),"bytes":p.stat().st_size} for p in (WORK/aid).rglob("*") if p.is_file()]
+
+# Modular capability APIs; original coworker routes remain unchanged.
+from extensions import router as extensions_router
+app.include_router(extensions_router)

@@ -1,0 +1,8 @@
+{$KAMY_DOMAIN} {
+    encode zstd gzip
+    header {
+        -Server
+        X-Robots-Tag "noindex, nofollow"
+    }
+    reverse_proxy 127.0.0.1:8000
+}

@@ -3,7 +3,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 KAMY_DATA_DIR=/data
 COPY requirements.txt requirements-browser.txt ./
 RUN pip install --no-cache-dir -r requirements.txt -r requirements-browser.txt
-COPY app.py .
+COPY app.py extensions.py security.py ./
 COPY static ./static
 COPY assets ./assets
 RUN useradd -m -u 10001 kamy && mkdir -p /data/workspaces && chown -R kamy:kamy /app /data
