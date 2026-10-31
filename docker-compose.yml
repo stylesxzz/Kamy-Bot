@@ -10,6 +10,10 @@ services:
       KAMY_DATA_DIR: /data
       KAMY_BROWSER_ENABLED: "${KAMY_BROWSER_ENABLED:-1}"
       KAMY_MASTER_KEY: "${KAMY_MASTER_KEY:-}"
+      KAMY_ADMIN_USERNAME: "${KAMY_ADMIN_USERNAME:-admin}"
+      KAMY_ADMIN_PASSWORD: "${KAMY_ADMIN_PASSWORD:-}"
+      KAMY_SESSION_SECRET: "${KAMY_SESSION_SECRET:-}"
+      KAMY_COOKIE_SECURE: "${KAMY_COOKIE_SECURE:-1}"
     volumes:
       - kamy_data:/data
     shm_size: "1gb"
