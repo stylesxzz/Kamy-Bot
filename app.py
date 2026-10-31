@@ -19,23 +19,10 @@ DATA=Path(os.getenv("KAMY_DATA_DIR","./data")); WORK=DATA/"workspaces"; DB=DATA/
 DATA.mkdir(parents=True,exist_ok=True); WORK.mkdir(parents=True,exist_ok=True)
 NVIDIA_URL="https://integrate.api.nvidia.com/v1/chat/completions"
 app=FastAPI(title="Kamy Bot",version="1.1.0",docs_url=None,redoc_url=None,openapi_url=None)
-from security import SecurityMiddleware, SecurityHeadersMiddleware, login as security_login, apply_session, clear_session
-app.add_middleware(SecurityMiddleware)
+from security import LocalOnlyMiddleware, SecurityHeadersMiddleware
+app.add_middleware(LocalOnlyMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
-@app.post("/api/auth/login")
-async def auth_login(request:Request,b:dict):
- username=str(b.get("username",""))[:120];password=str(b.get("password",""))[:512]
- session,error=security_login(username,password,request.client.host if request.client else "unknown")
- if error:raise HTTPException(503 if "KAMY_" in error else 401,error)
- response=JSONResponse({"authenticated":True,"user":username})
- return apply_session(response,session)
-
-@app.get("/api/auth/me")
-def auth_me(request:Request):return {"authenticated":True,"user":request.state.kamy_user}
-
-@app.post("/api/auth/logout")
-def auth_logout():return clear_session(JSONResponse({"authenticated":False}))
 app.mount("/assets",StaticFiles(directory=str(ROOT/"assets")),name="assets")
 app.mount("/static",StaticFiles(directory=str(ROOT/"static")),name="static")
 DEFAULT=[
@@ -166,7 +153,7 @@ async def chat(aid:str,b:Chat):
   try:
    ext=__import__("extensions")
    available_tools=ext.enabled_mcp_tools()
-   request_payload={"model":a["model"],"messages":[{"role":"system","content":"Você é um coworker do Kamy Bot. Responda em português. Não afirme que realizou ferramentas; toda chamada MCP precisa de aprovação explícita do administrador. Nunca tente contornar permissões.\\n"+ext.active_skill_instructions()}]+hist,"temperature":0.5,"max_tokens":1200}
+   request_payload={"model":a["model"],"messages":[{"role":"system","content":"Você é um coworker do Kamy Bot. Responda em português. Não afirme que realizou ferramentas; toda chamada MCP precisa de autorização explícita do usuário. Nunca tente contornar permissões.\\n"+ext.active_skill_instructions()}]+hist,"temperature":0.5,"max_tokens":1200}
    if available_tools:request_payload["tools"]=available_tools;request_payload["tool_choice"]="auto"
    async with httpx.AsyncClient(timeout=90) as client:
     r=await client.post(NVIDIA_URL,headers={"Authorization":"Bearer "+reveal_secret(a["api_key"]),"Content-Type":"application/json"},json=request_payload)
