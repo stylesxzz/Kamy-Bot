@@ -219,8 +219,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 cp .env.example .env
-# Edite .env: defina senha, KAMY_SESSION_SECRET e KAMY_MASTER_KEY.
-# Para HTTP local, configure KAMY_COOKIE_SECURE=0.
+# Edite .env e configure KAMY_MASTER_KEY.
 set -a; . ./.env; set +a
 export KAMY_BROWSER_ENABLED=0
 uvicorn app:app --host 127.0.0.1 --port 8000
@@ -239,7 +238,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 cp .env.example .env
 # Edite .env e configure KAMY_MASTER_KEY.
-# Para HTTP local, mantenha KAMY_COOKIE_SECURE=0.
+# Configure KAMY_MASTER_KEY no .env para armazenar credenciais.
 set -a; . ./.env; set +a
 export KAMY_BROWSER_ENABLED=0
 uvicorn app:app --host 127.0.0.1 --port 8000
@@ -285,7 +284,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 cp .env.example .env
-# Edite .env e configure KAMY_ADMIN_PASSWORD, KAMY_SESSION_SECRET e KAMY_MASTER_KEY.
+# Edite .env e configure KAMY_MASTER_KEY.
 # Para HTTP local, mantenha KAMY_COOKIE_SECURE=0.
 set -a; . ./.env; set +a
 export KAMY_BROWSER_ENABLED=0
@@ -367,7 +366,7 @@ A seção **Extensions** da interface agrupa os módulos:
 | Módulo | Disponível nesta versão | Limite atual |
 |---|---|---|
 | Skills | Cadastro, revisão, habilitação, desativação e injeção automática de instruções aprovadas nos prompts dos coworkers. | Markdown declarativo apenas; não executa scripts. Limite de 8 Skills / 6.000 caracteres. |
-| MCP | Descoberta de ferramentas via Streamable HTTP, grants individuais, validação de argumentos, ferramentas concedidas disponíveis aos coworkers e execução após aprovação. | Exige HTTPS e KAMY_MCP_ALLOWED_HOSTS; SSE/STDIO e autenticação vinculada ao OAuth não estão disponíveis. |
+| MCP | Descoberta de ferramentas via Streamable HTTP, grants individuais, validação de argumentos, ferramentas concedidas disponíveis aos coworkers e execução após aprovação. | Exige Streamable HTTP HTTPS e KAMY_MCP_ALLOWED_HOSTS; execução STDIO e OAuth de transporte MCP ainda não estão disponíveis. |
 | Connect / OAuth | Cadastro de provedor, Authorization Code + PKCE S256, callback e armazenamento Fernet. | Configuração é específica por provedor; renovação/revogação e conectores prontos precisam ser adicionados. |
 | Finance | Cadastro, listagem e aprovação de propostas. | Não consulta saldos universais e não envia ordens reais. A rota de execução retorna HTTP 501 intencionalmente. |
 | Kamy Intel | Casos e evidências HTTPS. | Conectores automáticos para redes sociais e provedores de dados específicos ainda não estão implementados. |
@@ -392,7 +391,7 @@ Em desenvolvimento local, use o endereço de callback que o provedor aceite e qu
 - Operações financeiras reais permanecem desabilitadas.
 - Faça backup regular do volume Docker e da chave mestra OAuth.
 
-As allowlists e confirmações são controles da aplicação, não substitutos de isolamento de rede ou sandbox de execução. O runtime MCP aceita apenas hostnames exatos configurados em `KAMY_MCP_ALLOWED_HOSTS`, resolve DNS e rejeita endereços não públicos, não segue redirects e exige grant por ferramenta + aprovação por chamada. Para publicar: use HTTPS em proxy reverso, mantenha `KAMY_COOKIE_SECURE=1`, configure firewall, backups, monitoramento, rotação de segredos e restrinja a porta do container ao proxy. Não publique diretamente a porta 8000 na Internet. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. O Kamy foi projetado para uso individual e local. Não o exponha diretamente à Internet: use VPN privada ou túnel seguro se precisar acessá-lo remotamente. A execução de ferramentas externas continua limitada por permissões, validação de argumentos e confirmação do usuário.
+As allowlists e confirmações são controles da aplicação, não substitutos de isolamento de rede ou sandbox de execução. O runtime MCP aceita apenas hostnames exatos configurados em `KAMY_MCP_ALLOWED_HOSTS`, resolve DNS e rejeita endereços não públicos, não segue redirects e exige grant por ferramenta. A confirmação do usuário deve ser reservada a operações com efeitos externos ou financeiros. Para publicar: use HTTPS em proxy reverso, mantenha `KAMY_COOKIE_SECURE=1`, configure firewall, backups, monitoramento, rotação de segredos e restrinja a porta do container ao proxy. Não publique diretamente a porta 8000 na Internet. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. O Kamy foi projetado para uso individual e local. Não o exponha diretamente à Internet: use VPN privada ou túnel seguro se precisar acessá-lo remotamente. A execução de ferramentas externas continua limitada por permissões, validação de argumentos e confirmação do usuário.
 
 ## Testes e validação local
 
