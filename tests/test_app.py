@@ -22,7 +22,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(kamy, "WORK", tmp_path / "workspaces")
     kamy.WORK.mkdir(parents=True, exist_ok=True)
     kamy.init()
-    with TestClient(kamy.app) as test_client:
+    with TestClient(kamy.app, client=("127.0.0.1", 50000)) as test_client:
         yield test_client, kamy
 
 
