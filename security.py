@@ -1,5 +1,6 @@
 """Local-only access boundary and security headers for the single-user Kamy desktop app."""
 import ipaddress
+import os
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -8,7 +9,12 @@ class LocalOnlyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         host = request.client.host if request.client else ""
         try:
-            is_local = ipaddress.ip_address(host).is_loopback
+            address = ipaddress.ip_address(host)
+            is_local = address.is_loopback
+            # Compose publishes the host port on 127.0.0.1 only; Docker reaches
+            # the container through its private bridge address.
+            if not is_local and os.getenv("KAMY_DOCKER_LOCAL") == "1":
+                is_local = address.is_private
         except ValueError:
             is_local = False
         if not is_local:
