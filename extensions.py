@@ -1,5 +1,5 @@
 """Kamy Bot extension control plane. Downloaded skill code, arbitrary MCP commands and financial orders are never executed automatically."""
-import base64, hashlib, json, os, secrets, sqlite3, time, uuid
+import base64, hashlib, json, os, secrets, sqlite3, time, uuid, socket, ipaddress
 from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
@@ -27,6 +27,9 @@ def init_db():
   c.executescript("""
   CREATE TABLE IF NOT EXISTS skills(id TEXT PRIMARY KEY,name TEXT,description TEXT,content TEXT,source TEXT,status TEXT,created REAL);
   CREATE TABLE IF NOT EXISTS mcp_servers(id TEXT PRIMARY KEY,name TEXT,transport TEXT,url TEXT,command TEXT,args TEXT,status TEXT,created REAL);
+  CREATE TABLE IF NOT EXISTS mcp_tools(server_id TEXT,tool_name TEXT,description TEXT,input_schema TEXT,discovered REAL,PRIMARY KEY(server_id,tool_name));
+  CREATE TABLE IF NOT EXISTS mcp_tool_permissions(server_id TEXT,tool_name TEXT,enabled INTEGER,granted_at REAL,PRIMARY KEY(server_id,tool_name));
+  CREATE TABLE IF NOT EXISTS mcp_tool_proposals(id TEXT PRIMARY KEY,server_id TEXT,tool_name TEXT,arguments TEXT,status TEXT,result TEXT,created REAL,decided REAL);
   CREATE TABLE IF NOT EXISTS oauth_providers(id TEXT PRIMARY KEY,name TEXT,authorization_url TEXT,token_url TEXT,client_id TEXT,client_secret TEXT,redirect_uri TEXT,scopes TEXT,created REAL);
   CREATE TABLE IF NOT EXISTS oauth_states(state TEXT PRIMARY KEY,provider_id TEXT,verifier TEXT,expires REAL,created REAL);
   CREATE TABLE IF NOT EXISTS oauth_tokens(provider_id TEXT PRIMARY KEY,access_token TEXT,refresh_token TEXT,token_type TEXT,scope TEXT,expires_at REAL,updated REAL);
