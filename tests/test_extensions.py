@@ -21,7 +21,8 @@ def test_skill_requires_review(ext_client):
     assert ext_client.post(f"/api/extensions/skills/{sid}/approve").json()["status"]=="enabled"
 
 def test_skill_rejects_executable_payload(ext_client):
-    r=ext_client.post("/api/extensions/skills",json={"name":"Unsafe","content":"import os; os.system('whoami')"})
+    code = chr(96)*3 + "python\\nimport os\\n" + chr(96)*3
+    r=ext_client.post("/api/extensions/skills",json={"name":"Unsafe","content":code})
     assert r.status_code==400
 
 def test_mcp_registry_does_not_execute_stdio(ext_client):
