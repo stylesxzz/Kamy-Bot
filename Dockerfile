@@ -1,8 +1,8 @@
 FROM mcr.microsoft.com/playwright/python:v1.52.0-noble
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 KAMY_DATA_DIR=/data
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements-browser.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-browser.txt
 COPY app.py .
 COPY static ./static
 COPY assets ./assets
