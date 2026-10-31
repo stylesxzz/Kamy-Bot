@@ -16,6 +16,10 @@ from fastapi.testclient import TestClient
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("KAMY_BROWSER_ENABLED", "0")
+    monkeypatch.setenv("KAMY_ADMIN_USERNAME", "admin")
+    monkeypatch.setenv("KAMY_ADMIN_PASSWORD", "test-password-at-least-16")
+    monkeypatch.setenv("KAMY_SESSION_SECRET", "test-session-secret-which-is-long-enough-123456")
+    monkeypatch.setenv("KAMY_COOKIE_SECURE", "0")
     import app as kamy
     monkeypatch.setattr(kamy, "DB", tmp_path / "kamy.sqlite3")
     monkeypatch.setattr(kamy, "DATA", tmp_path)
@@ -23,6 +27,9 @@ def client(tmp_path, monkeypatch):
     kamy.WORK.mkdir(parents=True, exist_ok=True)
     kamy.init()
     with TestClient(kamy.app) as test_client:
+        login = test_client.post("/api/auth/login", json={"username":"admin","password":"test-password-at-least-16"})
+        assert login.status_code == 200
+        test_client.headers.update({"X-CSRF-Token": test_client.cookies.get("kamy_csrf")})
         yield test_client, kamy
 
 
