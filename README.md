@@ -27,13 +27,13 @@ O projeto preserva uma arquitetura simples e extensível baseada em **Python, Fa
 - **Permissions:** allowlist de ferramentas e domínios por coworker.
 - **Workspaces:** arquivos organizados em diretórios separados por agente.
 - **Audit trail:** histórico de ações, decisões e resultados.
-- **Skills:** cadastro e revisão de instruções declarativas em Markdown.
-- **MCP registry:** cadastro de servidores e transportes para a futura camada de execução.
+- **Skills:** cadastro, revisão e injeção automática de Skills aprovadas no prompt dos coworkers (limite de 8 Skills / 6.000 caracteres).
+- **MCP runtime:** descoberta de ferramentas via Streamable HTTP, allowlist de host, permissão individual por ferramenta, validação JSON Schema e execução somente após aprovação explícita.
 - **Connect / OAuth:** fluxo Authorization Code + PKCE e armazenamento criptografado de tokens.
 - **Finance:** registro e aprovação de propostas; envio de ordens reais permanece bloqueado.
 - **Kamy Intel:** casos de pesquisa e evidências provenientes de fontes públicas ou APIs autorizadas.
 
-> **Estado do produto:** Kamy Bot é um MVP funcional em evolução. Os coworkers, chat, políticas, aprovação, workspaces e auditoria fazem parte da aplicação atual. As extensões possuem interfaces e APIs iniciais; onde um runtime ou adaptador específico ainda não existe, isso é indicado explicitamente. Não confunda cadastro com conexão efetiva.
+> **Estado do produto:** Kamy Bot é um MVP funcional em evolução. Os coworkers, chat, políticas, aprovação, workspaces e auditoria fazem parte da aplicação atual. O runtime MCP ativo suporta somente Streamable HTTP HTTPS e exige allowlist de host. SSE e STDIO permanecem desativados. A conta administrativa é única nesta versão. Não confunda cadastro com conexão efetiva.
 
 ## Coworkers
 
@@ -331,11 +331,11 @@ A seção **Extensions** da interface agrupa os módulos:
 
 | Módulo | Disponível nesta versão | Limite atual |
 |---|---|---|
-| Skills | Cadastro, revisão, habilitação e desativação de instruções Markdown. | Não executa scripts ou código baixado. |
-| MCP | Registro de servidores HTTP/SSE/STDIO e desativação. | Ainda não há runtime cliente completo, descoberta de ferramentas nem execução com permissões por ferramenta. STDIO não é iniciado. |
+| Skills | Cadastro, revisão, habilitação, desativação e injeção automática de instruções aprovadas nos prompts dos coworkers. | Markdown declarativo apenas; não executa scripts. Limite de 8 Skills / 6.000 caracteres. |
+| MCP | Descoberta de ferramentas via Streamable HTTP, grants individuais, validação de argumentos e execução após aprovação. | Exige HTTPS e KAMY_MCP_ALLOWED_HOSTS; SSE/STDIO e autenticação vinculada ao OAuth não estão disponíveis. |
 | Connect / OAuth | Cadastro de provedor, Authorization Code + PKCE S256, callback e armazenamento Fernet. | Configuração é específica por provedor; renovação/revogação e conectores prontos precisam ser adicionados. |
 | Finance | Cadastro, listagem e aprovação de propostas. | Não consulta saldos universais e não envia ordens reais. A rota de execução retorna HTTP 501 intencionalmente. |
-| Kamy Intel | Casos de pesquisa e anexos de evidências HTTPS. | Não é um motor de busca ou scraper universal de redes sociais. Conectores devem usar APIs oficiais e autorização. |
+| Kamy Intel | Casos e evidências HTTPS. | Conectores automáticos para redes sociais e provedores de dados específicos ainda não estão implementados. |
 
 O OAuth requer que o operador cadastre os endpoints oficiais, client ID, callback e escopos do provedor. O callback usado pela aplicação é:
 
@@ -357,7 +357,7 @@ Em desenvolvimento local, use o endereço de callback que o provedor aceite e qu
 - Operações financeiras reais permanecem desabilitadas.
 - Faça backup regular do volume Docker e da chave mestra OAuth.
 
-O gate de aprovação e as allowlists são controles da aplicação, não substitutos de autenticação de operador, isolamento de rede ou sandbox de execução. Para publicar: use HTTPS em proxy reverso, mantenha `KAMY_COOKIE_SECURE=1`, configure firewall, backups, monitoramento, rotação de segredos e restrinja a porta do container ao proxy. Não publique diretamente a porta 8000 na Internet. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. Antes de uma implantação pública, implemente autenticação, proteção CSRF, rate limiting, filtragem de egress, gestão de sessões, isolamento reforçado e revisão independente.
+O gate de aprovação e as allowlists são controles da aplicação, não substitutos de isolamento de rede ou sandbox de execução. O runtime MCP aceita apenas hostnames exatos configurados em `KAMY_MCP_ALLOWED_HOSTS`, resolve DNS e rejeita endereços não públicos, não segue redirects e exige grant por ferramenta + aprovação por chamada. Para publicar: use HTTPS em proxy reverso, mantenha `KAMY_COOKIE_SECURE=1`, configure firewall, backups, monitoramento, rotação de segredos e restrinja a porta do container ao proxy. Não publique diretamente a porta 8000 na Internet. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. Antes de uma implantação pública, implemente autenticação, proteção CSRF, rate limiting, filtragem de egress, gestão de sessões, isolamento reforçado e revisão independente.
 
 ## Testes e validação local
 
