@@ -5,6 +5,7 @@ import extensions
 
 @pytest.fixture()
 def ext_client(tmp_path, monkeypatch):
+    monkeypatch.setenv("KAMY_TESTING","1")
     monkeypatch.setenv("KAMY_BROWSER_ENABLED","0")
     monkeypatch.setenv("KAMY_MASTER_KEY","")
     monkeypatch.setattr(extensions,"DB",tmp_path/"extensions.sqlite3")
