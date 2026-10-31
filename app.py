@@ -90,6 +90,9 @@ class AgentIn(BaseModel):
  domains:list[str]=Field(default_factory=lambda:["example.com"]); tools:list[str]=Field(default_factory=lambda:["browser.goto","browser.screenshot","file.write","file.read"])
 @app.post("/api/agents")
 def add_agent(b:AgentIn):
+ if b.api_key and len(b.api_key)>512: raise HTTPException(400,'NVIDIA API key is too long')
+ if any(not re.fullmatch(r'[a-zA-Z0-9.-]+',d) for d in b.domains): raise HTTPException(400,'Invalid domain')
+ if any(t not in {'browser.goto','browser.screenshot','file.write','file.read'} for t in b.tools): raise HTTPException(400,'Unknown tool')
  aid=re.sub("[^a-z0-9-]","-",b.name.lower()).strip("-")[:24] or uuid.uuid4().hex[:8]
  if any(t not in {"browser.goto","browser.screenshot","file.write","file.read"} for t in b.tools):raise HTTPException(400,"Unknown tool")
  with conn() as c:
