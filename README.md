@@ -29,11 +29,29 @@ O projeto preserva uma arquitetura simples e extensível baseada em **Python, Fa
 - **Audit trail:** histórico de ações, decisões e resultados.
 - **Skills:** cadastro, revisão e injeção automática de Skills aprovadas no prompt dos coworkers (limite de 8 Skills / 6.000 caracteres).
 - **MCP runtime:** descoberta de ferramentas via Streamable HTTP, allowlist de host, permissão individual por ferramenta, validação JSON Schema e execução somente após aprovação explícita.
-- **Connect / OAuth:** fluxo Authorization Code + PKCE e armazenamento criptografado de tokens.
-- **Finance:** registro e aprovação de propostas; envio de ordens reais permanece bloqueado.
-- **Kamy Intel:** casos de pesquisa e evidências provenientes de fontes públicas ou APIs autorizadas.
+- **OAuth para MCP:** Authorization Code + PKCE exclusivamente para autorizar servidores MCP HTTP que exigem login; tokens criptografados localmente e enviados apenas ao MCP associado. Não é usado pelo Finance/Binance nem pelo Intel.
+- **Finance:** análise e integração direta com Binance Spot API (preços públicos, saldos privados e ordens de mercado). Chaves Binance são API Key/Secret próprias, separadas de OAuth; comece pelo Testnet e confirme ordens explicitamente.
+- **Kamy Intel:** pesquisa na web por navegação e ferramentas MCP conectadas; organiza casos, URLs, evidências e cruzamento de fontes públicas ou APIs oficiais autorizadas.
 
 > **Estado do produto:** Kamy Bot é um MVP funcional em evolução. Os coworkers, chat, políticas, aprovação, workspaces e auditoria fazem parte da aplicação atual. O Kamy é um aplicativo single-user executado localmente: não possui login administrativo, cadastro de usuários ou serviço multi-tenant. O runtime MCP suporta Streamable HTTP e STDIO local. O processo STDIO é iniciado somente para descoberta e execução de ferramentas aprovadas, sem shell e sem herdar as chaves de API do processo Kamy. Não confunda cadastro com conexão efetiva.
+
+
+## Finance, Binance, Intel e OAuth
+
+### Binance (integração direta, sem OAuth)
+1. Crie uma API Key na Binance com permissões mínimas. Não habilite saque/withdrawals.
+2. No Kamy, abra Extensions → Finance e informe API Key e Secret. O par é criptografado com `KAMY_MASTER_KEY`.
+3. Mantenha Testnet habilitado para validar preços, consulta de conta e ordens de teste.
+4. A troca para Live usa a API Spot oficial. Cada ordem exige confirmação explícita na interface. O Kamy não oferece endpoints de saque.
+
+A integração atual cobre Spot REST (preço, conta e ordens MARKET). Não representa suporte universal a Futures, Margin, Earn, carteiras externas ou todas as classes de ativos.
+Documentação: https://developers.binance.com/en/docs/products/spot/rest-api
+
+### OAuth (somente MCP HTTP)
+Cadastre o provedor OAuth do servidor MCP em Extensions → Connect e selecione-o ao registrar o MCP Streamable HTTP. O token é anexado apenas às requisições daquele servidor. STDIO usa credenciais do ambiente/processo local, não OAuth HTTP. OAuth não conecta Binance e não é usado pelo Intel.
+
+### Intel e pesquisa na Internet
+Use NOVA/SCOUT, navegação autorizada e ferramentas de busca expostas pelos MCPs conectados para pesquisar fontes públicas. Registre URLs, títulos, trechos e datas em um caso Intel e compare fontes independentes. O Kamy não promete busca universal sem um provedor de busca/MCP configurado; respeite termos de uso, privacidade e controles de acesso.
 
 ## Coworkers
 
