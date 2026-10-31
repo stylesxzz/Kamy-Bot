@@ -6,17 +6,10 @@ import extensions
 @pytest.fixture()
 def ext_client(tmp_path, monkeypatch):
     monkeypatch.setenv("KAMY_BROWSER_ENABLED","0")
-    monkeypatch.setenv("KAMY_ADMIN_USERNAME","admin")
-    monkeypatch.setenv("KAMY_ADMIN_PASSWORD","test-password-at-least-16")
-    monkeypatch.setenv("KAMY_SESSION_SECRET","test-session-secret-which-is-long-enough-123456")
-    monkeypatch.setenv("KAMY_COOKIE_SECURE","0")
     monkeypatch.setenv("KAMY_MASTER_KEY","")
     monkeypatch.setattr(extensions,"DB",tmp_path/"extensions.sqlite3")
     extensions.init_db()
     with TestClient(app.app) as client:
-        login = client.post("/api/auth/login", json={"username":"admin","password":"test-password-at-least-16"})
-        assert login.status_code == 200
-        client.headers.update({"X-CSRF-Token": client.cookies.get("kamy_csrf")})
         yield client
 
 def test_skill_requires_review(ext_client):
