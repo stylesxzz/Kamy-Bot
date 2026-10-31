@@ -64,6 +64,12 @@ def test_demo_chat_and_reject_pending_action(client):
     assert decision.json()["status"] == "rejected"
 
 
+def test_browser_is_explicitly_disabled_in_native_mode(client):
+    http, _ = client
+    response = http.get("/api/browser/nova/screenshot")
+    assert response.status_code == 503
+
+
 def test_workspace_path_traversal_is_rejected(client):
     _, kamy = client
     with pytest.raises(Exception):
