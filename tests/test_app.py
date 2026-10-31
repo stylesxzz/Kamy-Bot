@@ -105,3 +105,9 @@ def test_remote_clients_are_rejected_by_default(client):
     _, kamy = client
     with TestClient(kamy.app, client=("192.0.2.10", 12345)) as remote:
         assert remote.get("/api/agents").status_code == 403
+
+def test_docker_bridge_is_allowed_only_in_local_compose_mode(client, monkeypatch):
+    _, kamy = client
+    monkeypatch.setenv("KAMY_DOCKER_LOCAL", "1")
+    with TestClient(kamy.app, client=("172.18.0.1", 12345)) as docker_bridge:
+        assert docker_bridge.get("/api/health").status_code == 200
