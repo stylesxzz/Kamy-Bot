@@ -287,6 +287,18 @@ As variáveis são documentadas em \`.env.example\`. O Docker Compose carrega au
 | \`KAMY_BROWSER_ENABLED\` | \`1\` no Docker | Habilita Playwright no container. Use \`0\` no modo nativo/Termux. |
 | \`KAMY_MASTER_KEY\` | vazio | Chave Fernet persistente para criptografar segredos/tokens OAuth. |
 
+### Criar credenciais administrativas e segredos de sessão
+
+Gere valores aleatórios no terminal:
+
+```bash
+python -c "import secrets; print('KAMY_ADMIN_PASSWORD='+secrets.token_urlsafe(24)); print('KAMY_SESSION_SECRET='+secrets.token_urlsafe(48))"
+```
+
+Copie os valores para `.env`. Escolha um nome de usuário administrativo e nunca reutilize senha de outros serviços. A aplicação usa sessão assinada, cookie HttpOnly/SameSite=Strict, proteção CSRF para métodos que alteram dados e limitação básica de tentativas de login. Esta versão oferece uma conta administrativa única; ainda não é um sistema multiusuário com papéis.
+
+Para testar localmente em HTTP sem TLS, defina `KAMY_COOKIE_SECURE=0`. Em qualquer publicação HTTPS, mantenha `KAMY_COOKIE_SECURE=1`.
+
 ### Gerar a chave mestra OAuth
 
 Com Python instalado:
@@ -337,7 +349,7 @@ Em desenvolvimento local, use o endereço de callback que o provedor aceite e qu
 
 - Docker Compose publica em \`127.0.0.1\` por padrão.
 - Não altere \`KAMY_BIND\` para \`0.0.0.0\` em uma rede pública sem uma camada de autenticação, HTTPS, firewall e revisão de segurança.
-- A aplicação atual não possui autenticação multiusuário própria e não está pronta para exposição direta à Internet. O bind local padrão reduz exposição acidental, mas não substitui autenticação.
+- A aplicação exige login administrativo, sessão assinada e proteção CSRF nas rotas privadas. Há uma única conta administrativa nesta versão; não há RBAC/multiusuário.
 - Não coloque chaves de API, senhas ou tokens no Git, em Issues ou em Skills.
 - Revise conteúdo de Skills e origem de servidores MCP antes de cadastrá-los.
 - Conceda o menor conjunto possível de escopos OAuth.
@@ -345,7 +357,7 @@ Em desenvolvimento local, use o endereço de callback que o provedor aceite e qu
 - Operações financeiras reais permanecem desabilitadas.
 - Faça backup regular do volume Docker e da chave mestra OAuth.
 
-O gate de aprovação e as allowlists são controles da aplicação, não substitutos de autenticação de operador, isolamento de rede ou sandbox de execução. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. Antes de uma implantação pública, implemente autenticação, proteção CSRF, rate limiting, filtragem de egress, gestão de sessões, isolamento reforçado e revisão independente.
+O gate de aprovação e as allowlists são controles da aplicação, não substitutos de autenticação de operador, isolamento de rede ou sandbox de execução. Para publicar: use HTTPS em proxy reverso, mantenha `KAMY_COOKIE_SECURE=1`, configure firewall, backups, monitoramento, rotação de segredos e restrinja a porta do container ao proxy. Não publique diretamente a porta 8000 na Internet. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. Antes de uma implantação pública, implemente autenticação, proteção CSRF, rate limiting, filtragem de egress, gestão de sessões, isolamento reforçado e revisão independente.
 
 ## Testes e validação local
 
