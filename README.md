@@ -33,7 +33,7 @@ O projeto preserva uma arquitetura simples e extensível baseada em **Python, Fa
 - **Finance:** registro e aprovação de propostas; envio de ordens reais permanece bloqueado.
 - **Kamy Intel:** casos de pesquisa e evidências provenientes de fontes públicas ou APIs autorizadas.
 
-> **Estado do produto:** Kamy Bot é um MVP funcional em evolução. Os coworkers, chat, políticas, aprovação, workspaces e auditoria fazem parte da aplicação atual. O Kamy é um aplicativo single-user executado localmente: não possui login administrativo, cadastro de usuários ou serviço multi-tenant. O runtime MCP suporta Streamable HTTP remoto com allowlist de host; STDIO ainda não é executado. Não confunda cadastro com conexão efetiva.
+> **Estado do produto:** Kamy Bot é um MVP funcional em evolução. Os coworkers, chat, políticas, aprovação, workspaces e auditoria fazem parte da aplicação atual. O Kamy é um aplicativo single-user executado localmente: não possui login administrativo, cadastro de usuários ou serviço multi-tenant. O runtime MCP suporta Streamable HTTP e STDIO local. O processo STDIO é iniciado somente para descoberta e execução de ferramentas aprovadas, sem shell e sem herdar as chaves de API do processo Kamy. Não confunda cadastro com conexão efetiva.
 
 ## Coworkers
 
@@ -146,6 +146,37 @@ Atalhos incluídos:
 ## Acesso remoto opcional
 
 O Kamy é local-first e bloqueia conexões que não sejam loopback. Não publique a porta 8000 nem altere `KAMY_BIND` para `0.0.0.0`. Se precisar acessar de outro dispositivo, configure uma VPN privada ou túnel autenticado que encaminhe a conexão ao `127.0.0.1` da máquina; não exponha o servidor diretamente à Internet.
+
+## Instalação nativa (sem Docker)
+
+O Kamy é um aplicativo individual. Instale no seu computador e use as credenciais das suas próprias contas.
+
+### Linux e macOS
+```bash
+git clone https://github.com/stylesxzz/Kamy-Bot.git
+cd Kamy-Bot
+bash scripts/install.sh
+bash scripts/start.sh
+``
+
+### Windows (PowerShell)
+```powershell
+git clone https://github.com/stylesxzz/Kamy-Bot.git
+cd Kamy-Bot
+powershell -ExecutionPolicy Bypass -File scripts/install.ps1
+.\scripts\start.ps1
+``
+
+### Android (Termux)
+```bash
+pkg install git
+git clone https://github.com/stylesxzz/Kamy-Bot.git
+cd Kamy-Bot
+bash scripts/install-termux.sh
+bash scripts/start.sh
+``
+
+Abra `http://127.0.0.1:8765`. A instalação cria uma chave Fernet local em `.env`; faça backup seguro do arquivo e do diretório `data/`. Nunca publique segredos no Git.
 
 ## Comandos de operação Docker
 
