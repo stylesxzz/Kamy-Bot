@@ -1,474 +1,301 @@
 <div align="center">
-  <img src="assets/kamy-mark.svg" width="112" alt="Kamy Bot mark" />
+  <img src="assets/kamy-mark.svg" width="112" alt="Símbolo Kamy Bot" />
   <h1>KAMY BOT</h1>
-  <p><strong>Local AI Coworkers · NVIDIA NIM · Human-approved automation</strong></p>
-  <p>Independent AI coworkers with private browser contexts, per-agent workspaces, approval gates and a persistent audit trail.</p>
-  <img src="assets/brand-palette.svg" width="100%" alt="Kamy Bot visual identity and color palette" />
-  <p><a href="https://github.com/stylesxzz/Kamy-Bot">Repository</a> · <a href="https://build.nvidia.com/">NVIDIA API Catalog</a> · <a href="https://docs.api.nvidia.com/nim/reference/llm-apis">NVIDIA NIM API docs</a></p>
+  <p><strong>Um espaço de trabalho de IA com agentes especializados, ferramentas e automações supervisionadas.</strong></p>
+  <p>Seu ambiente de coworkers de IA: organize tarefas, converse com agentes independentes, conecte modelos e ferramentas externas e acompanhe ações com controle e auditoria.</p>
+  <img src="assets/brand-palette.svg" width="100%" alt="Identidade visual do Kamy Bot" />
+  <p><a href="https://github.com/stylesxzz/Kamy-Bot">Repositório</a> · <a href="https://build.nvidia.com/">NVIDIA API Catalog</a> · <a href="https://docs.api.nvidia.com/nim/reference/llm-apis">Documentação NVIDIA NIM</a></p>
 </div>
 
-## 1. About
+# O que é o Kamy Bot?
 
-Kamy Bot is a self-hosted AI coworker workspace. It starts with NOVA, PIXEL and SCOUT, each with a separate channel, configuration, browser context and file workspace. The user can create more coworkers, configure NVIDIA NIM, manage approved tools/domains and review actions before execution.
+O **Kamy Bot** é uma plataforma de coworkers de inteligência artificial que pode ser hospedada pelo próprio usuário. Em vez de ser apenas um chatbot que responde mensagens, ele foi concebido como um ambiente de trabalho no qual diferentes agentes de IA podem receber tarefas, manter conversas e configurações próprias, utilizar ferramentas autorizadas e organizar arquivos em espaços separados.
 
-**Supported deployment modes**
+A ideia central é reunir, em um só lugar, assistência inteligente, automação supervisionada e integrações externas. O usuário conversa com os agentes pela interface web, configura o provedor de IA, define quais ferramentas e domínios podem ser utilizados e acompanha as ações que precisam de aprovação.
 
-| Platform | Recommended method | Browser automation |
-|---|---|---|
-| Windows 10/11 | Docker Desktop + Compose | Yes |
-| macOS | Docker Desktop + Compose | Yes |
-| Linux desktop/server | Docker Engine + Compose | Yes |
-| Android / Termux | Debian via proot-distro + Python venv | Disabled in native mode |
-| Other Linux ARM64 | Docker Engine if supported, otherwise Python venv | Depends on Playwright/Chromium support |
+O Kamy Bot é um projeto modular e expansível. Sua arquitetura inicial já oferece a base de coworkers, interface web, integração com NVIDIA NIM, automação de navegador opcional, espaços de trabalho individuais e um fluxo de aprovação. Uma camada de extensões está sendo adicionada para Skills, servidores MCP, OAuth, propostas financeiras e organização de pesquisas.
 
-> Termux does not provide a normal Docker Engine service. The Android instructions use a Debian userspace under proot and run the API natively. Chat and NVIDIA connectivity work in this mode; Playwright browser tools are disabled. For the complete browser experience, run Kamy Bot on a computer/server and open it from the phone over your private network.
+> **Em poucas palavras:** Kamy Bot é um ambiente de trabalho de IA que transforma modelos de linguagem em coworkers configuráveis, com ferramentas, contexto de trabalho e limites definidos pelo usuário.
 
-## 2. Features
+# O que ele faz?
 
-- **Coworker channels:** independent conversations and configurations.
-- **NVIDIA NIM:** OpenAI-compatible Chat Completions endpoint.
-- **Private browser contexts:** separate Playwright contexts per coworker when browser mode is enabled.
-- **Per-agent workspaces:** files scoped to `KAMY_DATA_DIR/workspaces/<agent-id>`.
-- **Approval gate:** proposed browser/file actions are queued until explicitly approved or rejected.
-- **Policy enforcement:** tool allowlists, exact approved-domain checks, URL scheme validation and workspace path checks are checked at execution time.
-- **Audit trail:** proposals, decisions and outcomes persist in SQLite.
-- **Bring your own coworker:** create agents and configure model, API key, tools and domains.
-- **Responsive interface:** desktop, tablet and mobile layouts.
+- Permite conversar com diferentes coworkers de IA em canais independentes.
+- Permite criar e configurar agentes adicionais.
+- Conecta os agentes a modelos de IA compatíveis, incluindo NVIDIA NIM.
+- Mantém configurações e históricos de conversa no ambiente hospedado.
+- Oferece espaços de arquivos separados por agente.
+- Pode utilizar navegador automatizado com Playwright quando executado no modo Docker com navegador habilitado.
+- Coloca ações compatíveis de navegador e arquivos em uma fila de aprovação antes da execução.
+- Aplica regras de ferramentas permitidas, domínios aprovados e caminhos de arquivos autorizados.
+- Registra propostas, decisões e resultados para auditoria.
+- Está recebendo uma camada modular para cadastrar Skills, servidores MCP e provedores OAuth.
+- Inclui uma base inicial para registrar propostas de investimento e organizar pesquisas com fontes públicas.
 
-## 3. Visual identity
+# Os coworkers
 
-The UI uses a dark plum canvas, translucent glass surfaces, blurred color fields and this four-color accent system:
+A instalação inicial apresenta três coworkers:
 
-| Token | Hex | Role |
-|---|---|---|
-| Solar | `#F2CB30` | Primary highlight |
-| Fuchsia | `#DA0090` | Active states |
-| Violet | `#2C0E63` | Secondary depth |
-| Midnight | `#12002E` | Core background |
+| Coworker | Como funciona |
+|---|---|
+| **NOVA** | Um coworker independente, com canal, configuração, contexto de navegador e espaço de arquivos próprios. |
+| **PIXEL** | Outro coworker independente, com seu próprio ambiente e histórico de trabalho. |
+| **SCOUT** | Um terceiro coworker independente, também configurável e isolado dos demais no nível de contexto e workspace. |
 
-## 4. NVIDIA NIM setup
+Os nomes identificam coworkers separados dentro do sistema. Cada um pode receber suas próprias instruções, modelo, credenciais de provedor, ferramentas permitidas e domínios aprovados. O usuário também pode criar outros coworkers.
 
-Kamy Bot uses the NVIDIA OpenAI-compatible Chat Completions endpoint:
+A especialização exata de cada coworker depende das instruções e ferramentas que forem configuradas. Os nomes, por si só, não significam que exista um conjunto fixo de competências autônomas já implementado.
 
-- API URL: `https://integrate.api.nvidia.com/v1/chat/completions`
-- Authentication: `Authorization: Bearer NVIDIA_API_KEY`
-- Default model: `meta/llama-3.3-70b-instruct`
+# Como o Kamy Bot funciona
 
-1. Create an API key in [NVIDIA API Catalog settings](https://build.nvidia.com/settings).
-2. Start Kamy Bot.
-3. Select **Add a coworker** or configure an existing coworker through the UI.
-4. Enter the NVIDIA API key and model identifier.
-5. Save the coworker.
+A arquitetura pode ser entendida em etapas:
 
-The key is stored server-side in the local SQLite database and is not returned by the agents API. Do not commit keys to Git or share the SQLite data volume.
+1. **Interface web:** o usuário abre o Kamy Bot no navegador e escolhe um coworker.
+2. **Agente:** a aplicação carrega as configurações e o histórico daquele coworker.
+3. **Modelo de IA:** o backend envia a conversa ao provedor configurado, como NVIDIA NIM.
+4. **Planejamento e ferramentas:** quando aplicável, o agente prepara uma ação compatível com as ferramentas habilitadas.
+5. **Políticas e aprovação:** a aplicação verifica as regras e, para ações sujeitas a aprovação, aguarda uma decisão explícita do usuário.
+6. **Execução:** somente ações aprovadas e suportadas pelo sistema são executadas.
+7. **Persistência e auditoria:** conversas, configurações, propostas e eventos relevantes são armazenados no banco de dados.
 
-Official references: [NVIDIA NIM LLM APIs](https://docs.api.nvidia.com/nim/reference/llm-apis) · [NVIDIA API Catalog](https://build.nvidia.com/).
+## Visão simplificada da arquitetura
 
-## 5. Installation — Windows 10/11
+~~~text
+                  USUÁRIO
+                     |
+                     v
+              INTERFACE WEB
+                     |
+                     v
+              BACKEND FASTAPI
+                     |
+          +----------+-----------+
+          |          |           |
+          v          v           v
+      COWORKERS   MODELOS IA   POLÍTICAS
+      NOVA        NVIDIA NIM   Aprovações
+      PIXEL       compatíveis  Domínios
+      SCOUT                    Ferramentas
+          |          |           |
+          +----------+-----------+
+                     |
+           +---------+----------+
+           |         |          |
+           v         v          v
+        BROWSER   WORKSPACES   SQLITE
+       Playwright  por agente  Histórico
+                              Auditoria
+                     |
+                     v
+              CAMADA DE EXTENSÕES
+          Skills · MCP · OAuth · Finance
+                    · Kamy Intel
+~~~
 
-### 5.1 Install prerequisites
+# Principais módulos
 
-1. Install **Docker Desktop for Windows**: https://docs.docker.com/desktop/setup/install/windows-install/
-2. During setup, use the WSL 2 backend when offered.
-3. Restart Windows if the installer requests it.
-4. Open Docker Desktop and wait until the engine reports that it is running.
-5. Open PowerShell and verify:
+## 1. Coworkers e conversas
 
-```powershell
-docker --version
-docker compose version
-```
+Cada coworker possui um canal de conversa e configurações próprias. É possível configurar o modelo, o provedor, as instruções e as ferramentas permitidas. O objetivo é permitir que diferentes agentes trabalhem em tarefas diferentes sem misturar seus históricos e espaços de arquivos.
 
-### 5.2 Download and start Kamy Bot
+## 2. Inteligência artificial e NVIDIA NIM
 
-```powershell
-git --version
-```
+O Kamy Bot pode se conectar ao endpoint compatível com OpenAI da NVIDIA NIM:
 
-If Git is missing, install it from https://git-scm.com/download/win, then reopen PowerShell.
+- Endpoint padrão: `https://integrate.api.nvidia.com/v1/chat/completions`
+- Autenticação: chave de API NVIDIA.
+- Modelo padrão documentado: `meta/llama-3.3-70b-instruct`.
 
-```powershell
-cd $HOME
-git clone https://github.com/stylesxzz/Kamy-Bot.git
-cd Kamy-Bot
-Copy-Item .env.example .env
-docker compose up --build -d
-docker compose ps
-```
+O modelo é o mecanismo que interpreta as mensagens e gera respostas. As ferramentas e permissões disponíveis ao agente são controladas pela aplicação, não pelo modelo sozinho.
 
-Open http://localhost:8000.
+Documentação: [NVIDIA NIM](https://docs.api.nvidia.com/nim/reference/llm-apis) · [NVIDIA API Catalog](https://build.nvidia.com/).
 
-### 5.3 View logs and stop
+## 3. Navegador e automação supervisionada
 
-```powershell
-docker compose logs -f kamy-bot
-docker compose down
-```
+Quando o modo de navegador está habilitado, o Kamy Bot utiliza Playwright e Chromium. Os coworkers mantêm contextos de navegador separados, incluindo armazenamento de sessão e cookies.
 
-To start again:
+As ações compatíveis passam por políticas de segurança. Ações que exigem aprovação são apresentadas ao usuário para aceitar ou rejeitar antes da execução.
 
-```powershell
-docker compose up -d
-```
+O contexto separado de navegador não equivale a isolamento completo por sistema operacional. O projeto é um MVP self-hosted, não um sandbox multiusuário endurecido.
 
-### 5.4 Optional: run without Docker (no browser)
+## 4. Workspaces e arquivos
 
-Install Python 3.11 or 3.12 from https://www.python.org/downloads/ and enable **Add Python to PATH**.
+Cada coworker possui um diretório de trabalho próprio dentro de `KAMY_DATA_DIR/workspaces/<agent-id>`. Isso permite organizar arquivos por agente e evitar que todos os coworkers compartilhem o mesmo espaço de trabalho por padrão.
 
-```powershell
-cd $HOME
-git clone https://github.com/stylesxzz/Kamy-Bot.git
-cd Kamy-Bot
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-$env:KAMY_BROWSER_ENABLED="0"
-$env:KAMY_DATA_DIR="$HOME\.kamy-bot"
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
-```
+## 5. Aprovações, políticas e auditoria
 
-Open http://127.0.0.1:8000. Browser actions are unavailable in this mode.
+O sistema possui uma camada de controle para ações suportadas:
 
-## 6. Installation — macOS
+- Lista de ferramentas permitidas.
+- Lista de domínios aprovados.
+- Validação de URLs e caminhos de workspace.
+- Aprovação ou rejeição de ações propostas.
+- Registro de propostas, decisões e resultados no SQLite.
 
-### 6.1 Install prerequisites
+A aprovação humana reduz o risco de ações indesejadas, mas não substitui autenticação, isolamento de rede ou proteção do servidor.
 
-1. Install Docker Desktop for Mac: https://docs.docker.com/desktop/setup/install/mac-install/
-2. Open Docker Desktop and wait for it to finish starting.
-3. Open Terminal and verify:
+# Camada de extensões
 
-```bash
-docker --version
-docker compose version
-git --version
-```
+A camada de extensões amplia o Kamy Bot sem substituir os coworkers e recursos originais. Ela foi iniciada como uma API modular e ainda não deve ser confundida com uma loja visual de extensões ou com um executor universal de ferramentas.
 
-If Git is missing, install Apple's Command Line Tools:
+## 6. Skills — habilidades instaláveis
 
-```bash
-xcode-select --install
-```
+Skills são conjuntos de instruções que ensinam o agente a seguir procedimentos para determinadas tarefas. Exemplos de habilidades que podem ser documentadas:
 
-### 6.2 Clone and run
+- Análise de mercado e educação financeira.
+- Organização de pesquisas e relatórios.
+- Desenvolvimento e revisão de código.
+- Análise de dados.
+- Organização de tarefas e documentação.
 
-```bash
-cd "$HOME"
+A API inicial permite cadastrar uma Skill em formato declarativo, revisar, habilitar e desabilitar. Conteúdo externo não deve ser tratado como confiável automaticamente. Nesta versão, o instalador aceita instruções em Markdown e não executa scripts baixados.
+
+## 7. MCP — conexão com ferramentas externas
+
+MCP (Model Context Protocol) é um protocolo para conectar aplicações de IA a ferramentas e fontes de contexto externas.
+
+A camada inicial do Kamy Bot permite registrar configurações de servidores MCP nos transportes:
+
+- Streamable HTTP.
+- SSE.
+- STDIO.
+
+O cadastro não significa que o servidor já esteja conectado e executando ferramentas: o runtime cliente MCP, descoberta de ferramentas, gestão de permissões por ferramenta e execução ainda precisam ser implementados. Comandos STDIO cadastrados não são iniciados automaticamente.
+
+A direção planejada é permitir que o usuário conecte serviços externos, veja quais ferramentas cada servidor oferece e autorize individualmente o que cada coworker pode utilizar.
+
+## 8. OAuth — autorização de contas externas
+
+OAuth é um padrão de autorização que permite ao usuário conceder acesso limitado a uma aplicação sem entregar a ela sua senha do serviço externo.
+
+A camada inicial oferece cadastro de provedores, início do fluxo Authorization Code com PKCE S256, callback e armazenamento criptografado de tokens, usando uma chave mestra configurada no ambiente.
+
+O fluxo depende do suporte e da configuração de cada provedor. É necessário cadastrar URLs oficiais, identificador do aplicativo, callback e escopos permitidos. Renovação e revogação de tokens, descoberta automática de provedores e conectores específicos ainda precisam ser concluídos.
+
+**O Kamy Bot não deve pedir a senha da conta externa, contornar MFA ou automatizar login por meio de captura de credenciais.** A autorização deve ocorrer na página oficial do provedor, com consentimento explícito do usuário.
+
+## 9. Finance — investimentos e informações financeiras
+
+O objetivo do módulo Finance é permitir que o Kamy Bot ajude o usuário a estudar investimentos, organizar informações e preparar propostas de operações.
+
+Possíveis capacidades futuras:
+
+- Consultar dados financeiros por APIs oficiais.
+- Comparar ativos, custos, riscos e indicadores.
+- Organizar carteira e histórico fornecidos pelo usuário.
+- Produzir análises e relatórios.
+- Preparar propostas de compra e venda.
+- Integrar provedores financeiros que ofereçam APIs autorizadas.
+
+A implementação atual possui uma base de registro de propostas de ordens, com estados de revisão e aprovação. **Ela não envia ordens reais a corretoras.** A rota de execução está deliberadamente bloqueada até que existam adaptadores oficiais por instituição, controles de risco, idempotência e confirmação final.
+
+Não existe conexão universal com qualquer banco ou corretora. Cada instituição possui APIs, permissões e requisitos próprios. Análises produzidas por IA não são garantia de retorno nem substituem avaliação financeira independente.
+
+## 10. Kamy Intel — pesquisa e organização de evidências
+
+O módulo Kamy Intel foi concebido para ajudar a organizar investigações e pesquisas com fontes verificáveis.
+
+Exemplos de uso legítimo:
+
+- Pesquisar informações publicamente disponíveis.
+- Organizar referências e links.
+- Registrar datas, trechos e origem das informações.
+- Montar uma linha do tempo baseada em evidências.
+- Preparar relatórios com distinção entre fatos confirmados e hipóteses.
+- Consultar APIs oficiais com autorização e escopos adequados.
+
+A base inicial permite criar casos e anexar evidências com URLs HTTPS, trechos e datas. Ela é um registro de evidências, não um mecanismo automático de busca em todas as redes sociais.
+
+Conectores de redes sociais precisam ser desenvolvidos individualmente, respeitando as APIs oficiais, permissões, termos de uso e privacidade. O sistema não deve acessar contas privadas sem autorização, coletar credenciais, perseguir pessoas ou expor dados pessoais indevidamente.
+
+# O que está implementado e o que está planejado?
+
+| Recurso | Situação documentada |
+|---|---|
+| Interface web responsiva | Implementada |
+| Coworkers NOVA, PIXEL e SCOUT | Implementados |
+| Criação e configuração de coworkers | Implementada |
+| Integração NVIDIA NIM | Implementada |
+| Contextos de navegador por coworker | Implementados no modo compatível |
+| Aprovação de ações suportadas | Implementada |
+| Workspaces por agente | Implementados |
+| Persistência SQLite e auditoria | Implementadas |
+| Cadastro e revisão de Skills declarativas | API inicial implementada |
+| Cadastro de servidores MCP | Registro inicial implementado |
+| Runtime universal para executar ferramentas MCP | Planejado |
+| OAuth Authorization Code + PKCE | Fluxo inicial implementado |
+| Renovação e revogação OAuth por provedor | Pendente |
+| Registro de propostas financeiras | API inicial implementada |
+| Envio de ordens reais a corretoras | Desabilitado / pendente |
+| Registro de casos e evidências Kamy Intel | API inicial implementada |
+| Conectores automáticos de redes sociais | Pendente |
+| Marketplace visual de Skills e MCP | Planejado |
+
+# Instalação e execução
+
+O Kamy Bot foi estruturado para execução self-hosted. O método recomendado é Docker Compose em Windows, macOS ou Linux. Também existe um modo Python nativo sem automação de navegador, útil em ambientes como Termux com Debian via proot.
+
+## Docker — instalação rápida
+
+~~~bash
 git clone https://github.com/stylesxzz/Kamy-Bot.git
 cd Kamy-Bot
 cp .env.example .env
 docker compose up --build -d
-docker compose ps
-```
+~~~
 
-Open http://localhost:8000.
+Abra no navegador:
 
-### 6.3 Logs, stop and restart
+`http://localhost:8000`
 
-```bash
+Para acompanhar:
+
+~~~bash
 docker compose logs -f kamy-bot
+~~~
+
+Para parar:
+
+~~~bash
 docker compose down
-docker compose up -d
-```
+~~~
 
-### 6.4 Optional: native Python mode (no browser)
+Consulte as instruções completas por sistema operacional neste README e os arquivos de configuração do projeto antes de instalar em produção.
 
-Install Python 3.11 or 3.12 (for example from https://www.python.org/downloads/macos/), then:
+# Dados, privacidade e segurança
 
-```bash
-cd "$HOME"
-git clone https://github.com/stylesxzz/Kamy-Bot.git
-cd Kamy-Bot
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-export KAMY_BROWSER_ENABLED=0
-export KAMY_DATA_DIR="$HOME/.kamy-bot"
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
-```
+O Kamy Bot é self-hosted: o usuário administra o ambiente onde a aplicação e seus dados são executados. Isso não significa que toda informação fique necessariamente offline. Quando um coworker utiliza um provedor remoto, como NVIDIA NIM, as mensagens necessárias à geração da resposta são enviadas ao serviço correspondente.
 
-Open http://127.0.0.1:8000.
+Cuidados importantes:
 
-## 7. Installation — Linux (Docker Engine)
+- Proteja o diretório de dados e o volume Docker.
+- Não envie arquivos `.env`, chaves de API, tokens ou senhas ao GitHub.
+- Configure uma chave mestra forte e persistente para criptografia dos tokens OAuth.
+- Use HTTPS e autenticação antes de expor o serviço fora de uma rede privada.
+- Revise Skills e servidores MCP antes de confiar neles.
+- Conceda apenas os escopos OAuth necessários.
+- Mantenha operações financeiras reais bloqueadas até implementar controles e integrações específicos.
+- Faça backups do banco de dados e dos workspaces.
 
-These commands cover Debian/Ubuntu. Other distributions should use the official Docker installation guide for their package manager: https://docs.docker.com/engine/install/.
+O projeto ainda é um MVP em evolução. Antes de uma implantação pública ou multiusuário, são necessários controles adicionais como autenticação, proteção CSRF, limitação de requisições, filtragem de tráfego de saída e isolamento mais forte entre agentes.
 
-### 7.1 Debian / Ubuntu prerequisites
+# Tecnologias
 
-```bash
-sudo apt-get update
-sudo apt-get install -y ca-certificates curl git
-sudo install -m 0755 -d /etc/apt/keyrings
-```
+- **Python** — lógica do backend.
+- **FastAPI** — API HTTP.
+- **SQLite** — persistência local.
+- **Playwright / Chromium** — automação de navegador opcional.
+- **NVIDIA NIM** — provedor de modelos de IA.
+- **Docker / Docker Compose** — implantação recomendada.
+- **HTML, CSS e JavaScript** — interface web.
+- **OAuth 2.0 / PKCE** — autorização de serviços externos.
+- **MCP** — protocolo de integração planejado para ferramentas externas.
 
-For **Ubuntu**:
+# Estrutura do projeto
 
-```bash
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-```
-
-For **Debian** (including Debian-based distributions; Kali users may need to use the matching Debian codename):
-
-```bash
-sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-```
-
-Install Docker Engine, Buildx and the Compose plugin:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo systemctl enable --now docker
-sudo docker run hello-world
-docker compose version
-```
-
-If your Linux distribution uses a different package manager (Fedora, Arch, openSUSE, etc.), follow https://docs.docker.com/engine/install/ and install the Docker Compose plugin as documented at https://docs.docker.com/compose/install/linux/.
-
-> If Docker commands require root, prefix them with `sudo`. Adding your account to the `docker` group grants effectively root-level privileges; understand that security implication before doing so.
-
-### 7.2 Clone and start the project
-
-```bash
-cd "$HOME"
-git clone https://github.com/stylesxzz/Kamy-Bot.git
-cd Kamy-Bot
-cp .env.example .env
-chmod +x start.sh
-./start.sh
-```
-
-Open http://localhost:8000.
-
-### 7.3 Operations
-
-```bash
-docker compose ps
-docker compose logs -f kamy-bot
-docker compose restart kamy-bot
-docker compose down
-docker compose up -d
-```
-
-## 8. Installation — Android / Termux
-
-> **Important:** Docker Engine is not supported as a normal service inside Termux/proot. This guide runs the API directly in a Debian userspace. Browser automation is disabled; use a computer/server for full Playwright browser functionality.
-
-### 8.1 Install Termux
-
-Install Termux from a trusted source such as [F-Droid](https://f-droid.org/packages/com.termux/) or the official [Termux GitHub](https://github.com/termux/termux-app). Avoid mixing Termux APKs from different sources.
-
-Open Termux and run:
-
-```bash
-pkg update -y && pkg upgrade -y
-pkg install -y git proot-distro
-```
-
-### 8.2 Install Debian inside Termux
-
-```bash
-proot-distro install debian
-proot-distro login debian
-```
-
-The following commands run **inside the Debian shell**:
-
-```bash
-apt update
-apt upgrade -y
-apt install -y git python3 python3-venv python3-pip build-essential
-```
-
-### 8.3 Clone and install Kamy Bot
-
-```bash
-cd "$HOME"
-git clone https://github.com/stylesxzz/Kamy-Bot.git
-cd Kamy-Bot
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-### 8.4 Start in Android mode
-
-```bash
-export KAMY_BROWSER_ENABLED=0
-export KAMY_DATA_DIR="$HOME/.local/share/kamy-bot"
-mkdir -p "$KAMY_DATA_DIR"
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
-```
-
-Open the Android browser at http://127.0.0.1:8000. Keep the Termux session alive while using the app.
-
-To stop the server, press **CTRL+C** in the terminal. To start it again, reopen Termux, enter Debian and run:
-
-```bash
-proot-distro login debian
-cd "$HOME/Kamy-Bot"
-. .venv/bin/activate
-export KAMY_BROWSER_ENABLED=0
-export KAMY_DATA_DIR="$HOME/.local/share/kamy-bot"
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
-```
-
-For access from another device on the same trusted Wi-Fi, change the host to `0.0.0.0` and open `http://ANDROID-LAN-IP:8000`. Do not expose this unauthenticated development server to the public internet.
-
-## 9. Native Python installation — any supported OS
-
-This method runs the API without Docker and without browser automation. It is useful on Linux, macOS, Windows and ARM64 systems where Docker is unavailable.
-
-Requirements: Python 3.11 or 3.12 and Git.
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/stylesxzz/Kamy-Bot.git
-cd Kamy-Bot
-```
-
-2. Create and activate a virtual environment:
-
-**Linux / macOS / Termux Debian**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-**Windows PowerShell**
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-3. Install dependencies and start:
-
-```bash
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-**Linux / macOS**
-
-```bash
-export KAMY_BROWSER_ENABLED=0
-export KAMY_DATA_DIR="$HOME/.kamy-bot"
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
-```
-
-**Windows PowerShell**
-
-```powershell
-$env:KAMY_BROWSER_ENABLED="0"
-$env:KAMY_DATA_DIR="$HOME\.kamy-bot"
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
-```
-
-Then open http://127.0.0.1:8000.
-
-## 10. Configuration
-
-The Compose deployment reads settings from `.env`:
-
-```dotenv
-KAMY_PORT=8000
-KAMY_BROWSER_ENABLED=1
-```
-
-- `KAMY_PORT`: host port exposed by Docker Compose.
-- `KAMY_BROWSER_ENABLED`: `1` enables Playwright (Docker deployment); `0` disables browser automation (native/Termux mode).
-- `KAMY_DATA_DIR`: internal data directory. Docker sets it to `/data`; native installs can set it to a persistent directory in the user's home.
-
-NVIDIA API keys are entered per coworker in the app. Do not put secrets in source files or commit `.env`.
-
-## 11. Tests and validation
-
-Install core dependencies and test tools:
-
-```bash
-python -m pip install -r requirements.txt pytest
-python -m compileall -q app.py tests
-pytest -q
-node --check static/app.js
-```
-
-GitHub Actions runs the Python syntax checks, pytest suite and JavaScript syntax check on Python 3.11 and 3.12 for pushes and pull requests.
-
-For a local Docker configuration check:
-
-```bash
-docker compose config -q
-```
-
-For a full container build and startup:
-
-```bash
-docker compose up --build -d
-docker compose ps
-curl http://localhost:8000/api/health
-```
-
-## 12. Data, logs and reset
-
-Docker persists data in the named volume `kamy_data`. This includes agent configuration, NVIDIA keys, conversations, action history and agent workspaces.
-
-```bash
-docker compose logs -f kamy-bot
-docker compose down
-docker compose up -d
-```
-
-**Destructive reset:** this permanently removes the database, stored keys, conversations, audit records and workspaces:
-
-```bash
-docker compose down -v
-```
-
-Native mode stores data in the directory configured by `KAMY_DATA_DIR`. Back up that directory before upgrading or deleting the project.
-
-## 13. Architecture
-
-```text
-Browser UI
-   |
-   v
-FastAPI ---------------- NVIDIA NIM Chat Completions
-   |
-   +-- SQLite (agents, conversations, audit events)
-   +-- Policy gate (tools, domains, workspace paths)
-   +-- Playwright Chromium (optional, one BrowserContext per agent)
-   +-- Per-agent workspace directories
-```
-
-## 14. Security model and known limitations
-
-Kamy Bot is a local-first MVP, not a hardened multi-tenant execution sandbox.
-
-- Browser contexts isolate cookies and storage but share a Chromium process; they are not OS-level isolation.
-- The container does not mount the host filesystem or Docker socket.
-- No general-purpose shell execution tool is exposed.
-- Domain allowlists use exact hostname matching. This is not a complete DNS-rebinding or network-layer SSRF defense.
-- API keys are stored in the local SQLite data volume. Protect the host and volume; encryption at rest is not implemented.
-- The app currently has no built-in user authentication. Keep it bound to localhost or a trusted private network. Do not expose it directly to the public internet.
-- Browser and file operations require approval, but approval does not replace network isolation, authentication or operating-system sandboxing.
-- The coworker action proposal layer is currently a limited intent parser for supported URL/file requests, not a general autonomous function-calling runtime.
-
-For an internet-facing deployment, add authentication, HTTPS, CSRF protection, rate limiting, secure secret storage, network egress filtering and stronger per-agent isolation first.
-
-## 15. Project structure
-
-```text
-.
+~~~text
+Kamy-Bot/
 ├── app.py
+├── extensions.py
 ├── requirements.txt
 ├── requirements-browser.txt
 ├── Dockerfile
@@ -477,68 +304,20 @@ For an internet-facing deployment, add authentication, HTTPS, CSRF protection, r
 ├── start.sh
 ├── start.bat
 ├── assets/
-│   ├── kamy-mark.svg
-│   └── brand-palette.svg
 ├── static/
-│   ├── index.html
-│   ├── app.js
-│   ├── style.css
-│   └── empty.svg
 ├── tests/
-│   └── test_app.py
 └── .github/
     └── workflows/
-        └── ci.yml
-```
-
-## 16. License
-
-MIT. See [LICENSE](LICENSE).
-
-## 17. Modular extensions — Finance, MCP, OAuth and Kamy Intel
-
-The extension API is additive. The original NOVA / PIXEL / SCOUT coworker routes, NVIDIA NIM, browser approval, workspaces and audit workflow remain available.
-
-### Master encryption key
-OAuth client secrets and access/refresh tokens are encrypted at rest with Fernet. Generate a persistent key once:
-~~~bash
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ~~~
-Set it as KAMY_MASTER_KEY in the private deployment environment. Back it up securely: losing it makes previously encrypted tokens unrecoverable. Never commit it.
 
-### Skills API
-- GET /api/extensions/skills — list skills.
-- POST /api/extensions/skills — submit declarative Markdown for review.
-- POST /api/extensions/skills/{id}/approve — enable a reviewed skill.
-- POST /api/extensions/skills/{id}/disable — disable it.
+# Filosofia do projeto
 
-The initial installer accepts instruction-only Markdown. It does not execute downloaded Python, shell or JavaScript. Review external skill repositories before trusting their instructions.
+O Kamy Bot busca ser mais do que uma interface de chat. Sua proposta é criar um ambiente de trabalho de IA modular, no qual o usuário escolhe os agentes, configura os modelos, conecta ferramentas autorizadas, define limites e acompanha o que acontece.
 
-### MCP registry
-- GET /api/extensions/mcp — list configured servers.
-- POST /api/extensions/mcp — register streamable-http, sse or stdio configuration.
-- POST /api/extensions/mcp/{id}/disable — disable a registration.
+A inteligência artificial ajuda a interpretar e executar tarefas, mas o usuário continua no controle das permissões, das conexões e das decisões importantes.
 
-Remote MCP endpoints must use HTTPS. HTTP is allowed only for loopback development endpoints. STDIO commands are stored as configuration and are not launched by this registry. This initial release provides registration metadata, not yet a general MCP client/tool execution runtime. Do not register untrusted servers.
+**Kamy Bot — seus coworkers de IA, suas ferramentas e seu ambiente de trabalho.**
 
-### OAuth provider setup
-Register a provider with its official authorization URL, token URL, client ID, exact HTTPS callback URI and minimum scopes. Then call POST /api/extensions/oauth/{provider_id}/start and open the returned authorization_url in the user's browser. The callback exchanges the code using PKCE S256 and stores tokens encrypted. Register the callback URI exactly in the provider console. The app does not collect passwords, bypass MFA, or automate credential entry. Provider-specific refresh, revocation and API adapters remain follow-up work.
+# Licença
 
-### Finance workflow
-- POST /api/extensions/finance/order-proposals — create a buy/sell proposal.
-- GET /api/extensions/finance/order-proposals — list proposals.
-- POST /api/extensions/finance/order-proposals/{id}/approve — approve for adapter integration.
-- POST /api/extensions/finance/order-proposals/{id}/execute — deliberately returns HTTP 501 until a reviewed provider-specific trading adapter is implemented.
-
-The current layer supports proposal and approval tracking only; it does not send orders or claim compatibility with every broker. Financial institutions have different APIs, eligibility, scopes and contractual restrictions. Use official APIs and user-authorized consent. Never provide brokerage passwords or private keys to the agent.
-
-### Kamy Intel — evidence ledger
-- POST /api/extensions/intel/cases — create a research case with a stated purpose.
-- GET /api/extensions/intel/cases — list cases.
-- POST /api/extensions/intel/cases/{id}/evidence — attach a public HTTPS source, excerpt and observation date.
-- GET /api/extensions/intel/cases/{id}/evidence — retrieve evidence.
-
-This is an evidence ledger, not an automatic social-network scraper. Platform searches must use public information or official APIs with user-authorized read-only scopes. Do not use it for private-account access, doxxing, stalking or bypassing platform controls. Distinguish verified facts from hypotheses and record source URLs and dates.
-
-### Current implementation boundary
-This release adds extension APIs and persistence. It does not yet include a visual extension marketplace, universal MCP execution engine, provider-specific brokerage adapters, automatic OAuth discovery for every provider, or automatic social-platform search connectors. Those require provider-specific implementation and tests.
+MIT. Consulte o arquivo [LICENSE](LICENSE).
