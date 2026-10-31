@@ -258,6 +258,36 @@ async def _mcp_rpc(server, method, params=None, request_id=1, session_id=None):
     except HTTPException:raise
     except Exception:raise HTTPException(502,"MCP request failed. Verify the endpoint and protocol version.")
 
+async def _mcp_stdio_call(server, method, params=None):
+    """Run a user-configured local MCP process over stdio without a shell."""
+    try:
+        import asyncio
+        from mcp import ClientSession, StdioServerParameters
+        from mcp.client.stdio import stdio_client
+    except ImportError:
+        raise HTTPException(503, "Install the MCP SDK from requirements.txt to use stdio servers.")
+    command = server["command"]
+    args = json.loads(server["args"] or "[]")
+    if not command or not isinstance(args, list) or len(args) > 64:
+        raise HTTPException(400, "Invalid local MCP command configuration.")
+    env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "TEMP", "SYSTEMROOT", "WINDIR") if key in os.environ}
+    params_obj = StdioServerParameters(command=command, args=args, env=env)
+    try:
+        async with stdio_client(params_obj) as (read_stream, write_stream):
+            async with ClientSession(read_stream, write_stream) as session:
+                await asyncio.wait_for(session.initialize(), timeout=20)
+                if method == "tools/list":
+                    result = await asyncio.wait_for(session.list_tools(), timeout=20)
+                    return {"tools": [tool.model_dump(by_alias=True) for tool in result.tools]}
+                if method == "tools/call":
+                    result = await asyncio.wait_for(session.call_tool(params["name"], params.get("arguments", {})), timeout=45)
+                    return result.model_dump(by_alias=True)
+                raise HTTPException(400, "Unsupported local MCP method.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(502, "Local MCP process failed. Check its executable, arguments and dependencies.")
+
 async def _mcp_session(server):
     init,session=await _mcp_rpc(server,"initialize",{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"Kamy-Bot","version":"1.1.0"}},1)
     if not init:raise HTTPException(502,"MCP initialization returned no result.")
@@ -268,8 +298,11 @@ async def _mcp_session(server):
 async def mcp_discover(sid:str):
     with db() as c:server=c.execute("SELECT * FROM mcp_servers WHERE id=?",(sid,)).fetchone()
     if not server:raise HTTPException(404,"MCP server not found.")
-    session=await _mcp_session(server)
-    result,_=await _mcp_rpc(server,"tools/list",{},3,session)
+    if server["transport"] == "stdio":
+        result = await _mcp_stdio_call(server, "tools/list")
+    else:
+        session=await _mcp_session(server)
+        result,_=await _mcp_rpc(server,"tools/list",{},3,session)
     tools=result.get("tools",[])
     if not isinstance(tools,list) or len(tools)>200:raise HTTPException(502,"Invalid or oversized MCP tools list.")
     with db() as c:
@@ -333,8 +366,12 @@ async def mcp_approve(proposal_id:str):
         grant=c.execute("SELECT enabled FROM mcp_tool_permissions WHERE server_id=? AND tool_name=?",(proposal["server_id"],proposal["tool_name"])).fetchone()
     try:
         if not server or not grant or not grant["enabled"]:raise HTTPException(403,"MCP server or tool grant was revoked.")
-        session=await _mcp_session(server)
-        result,_=await _mcp_rpc(server,"tools/call",{"name":proposal["tool_name"],"arguments":json.loads(proposal["arguments"])},4,session)
+        call_params={"name":proposal["tool_name"],"arguments":json.loads(proposal["arguments"])}
+        if server["transport"] == "stdio":
+            result=await _mcp_stdio_call(server,"tools/call",call_params)
+        else:
+            session=await _mcp_session(server)
+            result,_=await _mcp_rpc(server,"tools/call",call_params,4,session)
         output=json.dumps(result)[:30000]
         with db() as c:c.execute("UPDATE mcp_tool_proposals SET status='executed',result=?,decided=? WHERE id=? AND status='executing'",(output,time.time(),proposal_id))
         return {"id":proposal_id,"status":"executed","result":result}
@@ -347,7 +384,7 @@ async def mcp_approve(proposal_id:str):
 def enabled_mcp_tools():
     """OpenAI-compatible tool definitions for individually granted, active MCP tools."""
     with db() as c:
-        rows=c.execute("SELECT s.id server_id,t.tool_name,t.description,t.input_schema FROM mcp_servers s JOIN mcp_tools t ON t.server_id=s.id JOIN mcp_tool_permissions p ON p.server_id=t.server_id AND p.tool_name=t.tool_name WHERE s.status!='disabled' AND s.transport='streamable-http' AND p.enabled=1 ORDER BY s.name,t.tool_name LIMIT 40").fetchall()
+        rows=c.execute("SELECT s.id server_id,t.tool_name,t.description,t.input_schema FROM mcp_servers s JOIN mcp_tools t ON t.server_id=s.id JOIN mcp_tool_permissions p ON p.server_id=t.server_id AND p.tool_name=t.tool_name WHERE s.status!='disabled' AND s.transport IN ('streamable-http','stdio') AND p.enabled=1 ORDER BY s.name,t.tool_name LIMIT 40").fetchall()
     result=[]
     for row in rows:
         safe_name="kamy_mcp_"+row["server_id"].replace("-","")[:10]+"_"+hashlib.sha256(row["tool_name"].encode()).hexdigest()[:10]
