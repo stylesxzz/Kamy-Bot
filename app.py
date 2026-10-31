@@ -161,18 +161,35 @@ async def chat(aid:str,b:Chat):
   c.execute("INSERT INTO messages VALUES(?,?,?,?,?)",(str(uuid.uuid4()),aid,"user",msg,now()))
   hist=[dict(x) for x in c.execute("SELECT role,content FROM messages WHERE agent_id=? ORDER BY created",(aid,))]
  reply="Demo mode ativo. Configure sua chave NVIDIA API para conversar com o modelo. Posso propor navegação e operações de arquivo, sempre aguardando sua aprovação."
+ mcp_proposals=[]
  if a["api_key"]:
   try:
+   ext=__import__("extensions")
+   available_tools=ext.enabled_mcp_tools()
+   request_payload={"model":a["model"],"messages":[{"role":"system","content":"Você é um coworker do Kamy Bot. Responda em português. Não afirme que realizou ferramentas; toda chamada MCP precisa de aprovação explícita do administrador. Nunca tente contornar permissões.\\n"+ext.active_skill_instructions()}]+hist,"temperature":0.5,"max_tokens":1200}
+   if available_tools:request_payload["tools"]=available_tools;request_payload["tool_choice"]="auto"
    async with httpx.AsyncClient(timeout=90) as client:
-    r=await client.post(NVIDIA_URL,headers={"Authorization":"Bearer "+reveal_secret(a["api_key"]),"Content-Type":"application/json"},json={"model":a["model"],"messages":[{"role":"system","content":"Você é um coworker do Kamy Bot. Responda em português. Não afirme que realizou ferramentas; as ações precisam ser aprovadas pelo usuário.\n"+__import__("extensions").active_skill_instructions()}]+hist,"temperature":0.5,"max_tokens":1200})
-    r.raise_for_status();reply=r.json()["choices"][0]["message"]["content"]
+    r=await client.post(NVIDIA_URL,headers={"Authorization":"Bearer "+reveal_secret(a["api_key"]),"Content-Type":"application/json"},json=request_payload)
+    r.raise_for_status();model_message=r.json()["choices"][0]["message"]
+   reply=model_message.get("content") or ""
+   for call in model_message.get("tool_calls",[]):
+    try:
+     fn=call.get("function",{});args=json.loads(fn.get("arguments","{}"))
+     proposal=ext.queue_agent_mcp_proposal(fn.get("name",""),args)
+     mcp_proposals.append(proposal)
+    except Exception:
+     continue
+   if mcp_proposals:
+    summary=", ".join(x["tool_name"]+" ("+x["id"][:8]+")" for x in mcp_proposals)
+    reply=(reply+"\\n\\n" if reply else "")+"Solicitei aprovação para: "+summary+". Nenhuma ferramenta foi executada ainda. Revise em Extensions → MCP."
+   if not reply:reply="O modelo não retornou conteúdo. Verifique a configuração do provedor."
   except Exception:reply="Falha na NVIDIA API. Confira a chave, o modelo e a disponibilidade do endpoint."
  with conn() as c:c.execute("INSERT INTO messages VALUES(?,?,?,?,?)",(str(uuid.uuid4()),aid,"assistant",reply,now()))
  u=re.search(r"https?://[^\s]+",msg)
  if u and any(x in msg.lower() for x in ["abra","abrir","visite","navegue","open"]):audit(aid,"browser.goto",{"url":u.group(0).rstrip(".,)")})
  f=re.search(r"(?:salve|crie|escreva)\s+(?:um arquivo\s+)?([\w./-]+\.[\w]+)",msg,re.I)
  if f:audit(aid,"file.write",{"path":f.group(1),"content":"Created by Kamy Bot coworker.\n"+msg})
- return {"reply":reply}
+ return {"reply":reply,"mcp_proposals":mcp_proposals}
 @app.get("/api/actions")
 def actions(agent_id:str|None=None,limit:int=100):
  with conn() as c:
