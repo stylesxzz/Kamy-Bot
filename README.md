@@ -569,6 +569,110 @@ Abra `http://127.0.0.1:8000`.
 
 No PowerShell, use `Copy-Item .env.example .env` no lugar de `cp`.
 
+
+### Ambiente virtual Python (`.venv`)
+
+O Kamy usa um ambiente virtual Python para manter as dependências do projeto separadas das bibliotecas globais do sistema. **Não instale as dependências do projeto no Python global.**
+
+Os scripts `install.sh`, `install.ps1` e `install-termux.sh` já criam `.venv` e instalam as dependências automaticamente. Se você optar pela instalação manual, use os comandos abaixo.
+
+**Linux / macOS / Debian no Termux:**
+
+```bash
+# Dentro da pasta Kamy-Bot
+python3 --version
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+# Conferir se o Python vem do ambiente virtual
+which python
+python --version
+
+# Iniciar com o ambiente ativado (alternativa ao script)
+python -m uvicorn app:app --host 127.0.0.1 --port 8765
+
+# Ao terminar de usar
+deactivate
+```
+
+Se o comando `python3 -m venv .venv` falhar no Debian/Ubuntu, instale o suporte a venv:
+
+```bash
+sudo apt update
+sudo apt install -y python3-venv python3-pip
+```
+
+**Windows PowerShell:**
+
+```powershell
+# Dentro da pasta Kamy-Bot
+py -3.11 --version
+py -3.11 -m venv .venv
+
+# Ativar o ambiente virtual
+.\.venv\Scripts\Activate.ps1
+
+# Atualizar pip e instalar dependências
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+# Conferir o Python ativo
+Get-Command python
+python --version
+
+# Iniciar com o ambiente ativado (alternativa ao script)
+python -m uvicorn app:app --host 127.0.0.1 --port 8765
+
+# Ao terminar de usar
+deactivate
+```
+
+Se o PowerShell bloquear a ativação do ambiente, libere scripts apenas para a janela atual e ative novamente:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+```
+
+**Android / Termux:**
+
+```bash
+# Dentro da pasta Kamy-Bot
+python --version
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+# Iniciar com o ambiente ativado
+python -m uvicorn app:app --host 127.0.0.1 --port 8765
+
+# Ao terminar de usar
+deactivate
+```
+
+**Ativar novamente em uma sessão futura:**
+
+Linux, macOS e Termux:
+
+```bash
+cd ~/Kamy-Bot
+source .venv/bin/activate
+bash scripts/start.sh
+```
+
+Windows PowerShell:
+
+```powershell
+Set-Location .\Kamy-Bot
+.\.venv\Scripts\Activate.ps1
+.\scripts\start.ps1
+```
+
+O script de inicialização já chama o executável dentro de `.venv`, então a ativação manual não é obrigatória quando você usa `scripts/start.sh` ou `scripts/start.ps1`. Ela é útil para executar comandos Python, instalar dependências adicionais ou rodar testes no ambiente correto. Se o ambiente estiver corrompido, pare o Kamy e recrie-o removendo a pasta `.venv`, depois execute novamente o instalador da sua plataforma.
+
 ### Diagnóstico e manutenção
 
 **Docker:**
