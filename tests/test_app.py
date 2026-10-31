@@ -69,6 +69,8 @@ def test_demo_chat_and_reject_pending_action(client):
     decision = http.post(f"/api/actions/{pending['id']}/decision", json={"decision":"reject"})
     assert decision.status_code == 200
     assert decision.json()["status"] == "rejected"
+    repeated = http.post(f"/api/actions/{pending['id']}/decision", json={"decision": "approve"})
+    assert repeated.status_code == 409
 
 
 def test_browser_is_explicitly_disabled_in_native_mode(client):
