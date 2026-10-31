@@ -239,7 +239,8 @@ async def _mcp_rpc(server, method, params=None, request_id=1, session_id=None):
     url=_mcp_target(server)
     headers={"Content-Type":"application/json","Accept":"application/json, text/event-stream","MCP-Protocol-Version":"2025-03-26"}
     if session_id:headers["MCP-Session-Id"]=session_id
-    payload={"jsonrpc":"2.0","id":request_id,"method":method}
+    payload={"jsonrpc":"2.0","method":method}
+    if request_id is not None:payload["id"]=request_id
     if params is not None:payload["params"]=params
     try:
         async with httpx.AsyncClient(timeout=20,follow_redirects=False,trust_env=False) as client:
@@ -260,7 +261,7 @@ async def _mcp_rpc(server, method, params=None, request_id=1, session_id=None):
 async def _mcp_session(server):
     init,session=await _mcp_rpc(server,"initialize",{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"Kamy-Bot","version":"1.1.0"}},1)
     if not init:raise HTTPException(502,"MCP initialization returned no result.")
-    await _mcp_rpc(server,"notifications/initialized",None,2,session)
+    await _mcp_rpc(server,"notifications/initialized",None,None,session)
     return session
 
 @router.post("/mcp/{sid}/discover")
@@ -308,6 +309,11 @@ def mcp_propose(sid:str,tool_name:str,b:MCPProposalIn):
         grant=c.execute("SELECT enabled FROM mcp_tool_permissions WHERE server_id=? AND tool_name=?",(sid,tool_name)).fetchone()
         if not tool or not grant or not grant["enabled"]:raise HTTPException(403,"This MCP tool has not been individually granted.")
         if len(json.dumps(b.arguments))>20000:raise HTTPException(413,"MCP arguments too large.")
+        try:
+            import jsonschema
+            jsonschema.validate(b.arguments,json.loads(tool["input_schema"] or "{}"))
+        except jsonschema.ValidationError as exc:raise HTTPException(400,"MCP arguments do not match the discovered tool schema: "+exc.message[:300])
+        except json.JSONDecodeError:raise HTTPException(502,"Stored MCP input schema is invalid.")
         ident=str(uuid.uuid4())
         c.execute("INSERT INTO mcp_tool_proposals VALUES(?,?,?,?,?,?,?,?)",(ident,sid,tool_name,json.dumps(b.arguments),"pending_review",None,time.time(),None))
     return {"id":ident,"status":"pending_review","message":"Tool invocation is queued. Nothing runs before explicit approval."}
