@@ -39,6 +39,9 @@ def init_db():
   CREATE TABLE IF NOT EXISTS intel_evidence(id TEXT PRIMARY KEY,case_id TEXT,url TEXT,title TEXT,snippet TEXT,observed_at TEXT,source_type TEXT,created REAL);
   """)
 init_db()
+with db() as _c:
+    _cols={r["name"] for r in _c.execute("PRAGMA table_info(mcp_servers)")}
+    if "oauth_provider_id" not in _cols:_c.execute("ALTER TABLE mcp_servers ADD COLUMN oauth_provider_id TEXT")
 def cipher():
  key=os.getenv("KAMY_MASTER_KEY","").strip()
  if not key: raise HTTPException(503,"Configure KAMY_MASTER_KEY with a valid Fernet key before storing OAuth secrets or tokens.")
@@ -85,7 +88,7 @@ def disable_skill(sid:str):
  return {"id":sid,"status":"disabled"}
 
 class MCPIn(BaseModel):
- name:str=Field(min_length=2,max_length=80); transport:str=Field(pattern="^(streamable-http|sse|stdio)$"); url:str|None=None; command:str|None=None; args:list[str]=Field(default_factory=list)
+ name:str=Field(min_length=2,max_length=80); transport:str=Field(pattern="^(streamable-http|sse|stdio)$"); url:str|None=None; command:str|None=None; args:list[str]=Field(default_factory=list); oauth_provider_id:str|None=None
 @router.get("/mcp")
 def mcp_list():
  with db() as c:return [dict(x) for x in c.execute("SELECT id,name,transport,url,command,args,status,created FROM mcp_servers ORDER BY created DESC")]
@@ -100,8 +103,12 @@ def mcp_add(b:MCPIn):
  else:
   if not b.command or len(b.command)>200:raise HTTPException(400,"Informe o executável MCP local.")
   command=b.command # stored only; never launched by this API
+ if b.oauth_provider_id:
+  with db() as c:
+   if not c.execute("SELECT 1 FROM oauth_providers WHERE id=?",(b.oauth_provider_id,)).fetchone():raise HTTPException(404,"OAuth provider not found.")
+ if b.transport=="stdio" and b.oauth_provider_id:raise HTTPException(400,"OAuth is only for HTTP-based MCP connections, not STDIO.")
  ident=str(uuid.uuid4())
- with db() as c:c.execute("INSERT INTO mcp_servers VALUES(?,?,?,?,?,?,?,?)",(ident,b.name,b.transport,b.url,command,json.dumps(b.args),"registered_unverified",time.time()))
+ with db() as c:c.execute("INSERT INTO mcp_servers(id,name,transport,url,command,args,status,created,oauth_provider_id) VALUES(?,?,?,?,?,?,?,?,?)",(ident,b.name,b.transport,b.url,command,json.dumps(b.args),"registered_unverified",time.time(),b.oauth_provider_id))
  return {"id":ident,"status":"registered_unverified","message":"Registrado, não executado. Revise origem e permissões antes de habilitar."}
 @router.post("/mcp/{sid}/disable")
 def mcp_disable(sid:str):
@@ -239,6 +246,11 @@ def _mcp_target(server):
 async def _mcp_rpc(server, method, params=None, request_id=1, session_id=None):
     url=_mcp_target(server)
     headers={"Content-Type":"application/json","Accept":"application/json, text/event-stream","MCP-Protocol-Version":"2025-03-26"}
+    if server["oauth_provider_id"]:
+        with db() as c:token_row=c.execute("SELECT access_token,expires_at FROM oauth_tokens WHERE provider_id=?",(server["oauth_provider_id"],)).fetchone()
+        if not token_row:raise HTTPException(401,"Connect the MCP OAuth provider before using this server.")
+        if token_row["expires_at"]<time.time():raise HTTPException(401,"MCP OAuth token expired; reconnect the provider.")
+        headers["Authorization"]="Bearer "+unseal(token_row["access_token"])
     if session_id:headers["MCP-Session-Id"]=session_id
     payload={"jsonrpc":"2.0","method":method}
     if request_id is not None:payload["id"]=request_id
