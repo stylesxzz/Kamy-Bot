@@ -41,33 +41,19 @@ def _read(token):
 def _login_html():
     return """<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Kamy Bot · Login</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#10091a;color:#f5eafa;font:15px system-ui}.card{width:min(92vw,390px);padding:30px;border:1px solid #594064;border-radius:20px;background:#1c1128;box-shadow:0 20px 80px #0008}img{width:76px}h1{font-size:24px;margin:10px 0}p{color:#bcaac8;font-size:13px}label{display:block;margin:18px 0 7px;font-size:12px}input{width:100%;padding:13px;border-radius:9px;border:1px solid #594064;background:#10091a;color:white}button{width:100%;margin-top:18px;padding:13px;border:0;border-radius:9px;background:linear-gradient(100deg,#7750bc,#bd67ae);color:white;font-weight:700}#err{color:#ff9aaf;min-height:20px;font-size:12px}</style><main class="card"><img src="/assets/kamy-mascot.svg" alt="Kamy"><h1>Entrar no Kamy Bot</h1><p>Área privada do administrador. Entre com suas credenciais.</p><form id="f"><label>Usuário</label><input name="username" autocomplete="username" required><label>Senha</label><input name="password" type="password" autocomplete="current-password" required><button>Entrar</button><div id="err"></div></form></main><script>document.querySelector("#f").onsubmit=async e=>{e.preventDefault();let d=Object.fromEntries(new FormData(e.target));let r=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});let j=await r.json();if(r.ok)location.href="/";else document.querySelector("#err").textContent=j.detail||"Falha no login"}</script></html>"""
 
-class SecurityMiddleware(BaseHTTPMiddleware):
+class LocalOnlyMiddleware(BaseHTTPMiddleware):
+    """Keep the desktop app private to the machine by default; no user/admin login."""
     async def dispatch(self,request,call_next):
-        path=request.url.path
-        if path in ("/api/health","/login","/api/auth/login") or path.startswith("/static/") or path.startswith("/assets/"):
-            return await call_next(request)
-        if path=="/api/extensions/oauth/callback" and request.method=="GET":
-            return await call_next(request)
-        # The production app is fail-closed: missing admin credentials never grants anonymous access.
-        try:_secret();_admin_password()
-        except RuntimeError as exc:
-            return JSONResponse({"detail":str(exc),"setup_required":True},status_code=503)
-        session=_read(request.cookies.get(COOKIE,""))
-        if not session:
-            if path=="/":return HTMLResponse(_login_html(),status_code=200)
-            return JSONResponse({"detail":"Authentication required"},status_code=401)
-        request.state.kamy_user=session["sub"]
-        if request.method in ("POST","PUT","PATCH","DELETE"):
-            origin=request.headers.get("origin")
-            if origin:
-                parsed=urlparse(origin)
-                if parsed.netloc!=request.url.netloc:
-                    return JSONResponse({"detail":"Cross-origin request blocked"},status_code=403)
-            csrf=request.headers.get("x-csrf-token","")
-            if not csrf or not hmac.compare_digest(csrf,session.get("csrf","")) or csrf!=request.cookies.get(CSRF_COOKIE,""):
-                return JSONResponse({"detail":"CSRF validation failed"},status_code=403)
-        response=await call_next(request)
-        return response
+        host=request.client.host if request.client else ""
+        try:
+            import ipaddress
+            local=ipaddress.ip_address(host).is_loopback
+        except ValueError:
+            local=False
+        if not local:
+            return JSONResponse({"detail":"Kamy Bot accepts local connections only."},status_code=403)
+        return await call_next(request)
+
 
 def login(username,password,client_ip):
     now=time.time(); q=_failures[client_ip]
