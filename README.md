@@ -35,6 +35,14 @@ Kamy Bot é um aplicativo pessoal executado na máquina do próprio usuário. Ca
 
 A interface web é servida localmente e pode ser aberta pelo navegador do computador ou do próprio Android. O backend usa FastAPI/Python; os dados são mantidos no diretório local `data/` ou no volume Docker.
 
+### Atualização do cockpit local
+
+O cockpit atual organiza a experiência em quatro superfícies: **Coworkers**, **Audit trail**, **Permissions** e **Extensions**. NOVA, PIXEL, SCOUT e os agentes que você adicionar trabalham em workspaces separados. Cada agente pode ter um contexto Chromium próprio no Docker, uma área de arquivos delimitada e uma lista de ferramentas permitidas.
+
+O fluxo de segurança é deliberadamente visível. O agente primeiro propõe a ação; a política é verificada novamente no momento da execução; só então a ação pode ser aprovada ou rejeitada. O resultado, incluindo bloqueios e erros, fica salvo em `actions` no SQLite. A tela de browser mostra o último estado do workspace e o histórico permite revisar o payload antes de decidir.
+
+O Docker continua sendo o caminho recomendado quando o browser é necessário. A instalação nativa permanece adequada para chat, arquivos e Termux, com `KAMY_BROWSER_ENABLED=0` quando Chromium/Playwright não estiverem disponíveis. O mascote oficial continua sendo o elemento de marca do produto: ele aparece no README, na barra lateral e na área principal do cockpit em `assets/kamy-mascot.svg`; o símbolo reduzido permanece em `assets/kamy-mark.svg`.
+
 ## Recursos
 
 | Área | O que oferece | Limite importante |
