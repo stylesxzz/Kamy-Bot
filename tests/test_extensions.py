@@ -127,3 +127,26 @@ def test_mcp_can_be_disabled_without_launching_process(ext_client):
     disabled = ext_client.post(f"/api/extensions/mcp/{sid}/disable")
     assert disabled.status_code == 200
     assert disabled.json()["status"] == "disabled"
+
+
+def test_mcp_tool_requires_individual_grant_and_explicit_approval(ext_client, monkeypatch):
+    sid = "server-test"
+    with extensions.db() as db:
+        db.execute("INSERT INTO mcp_servers VALUES(?,?,?,?,?,?,?,?)", (sid,"Test MCP","streamable-http","https://mcp.example.com/mcp",None,"[]","registered_unverified",1.0))
+        db.execute("INSERT INTO mcp_tools VALUES(?,?,?,?,?)", (sid,"lookup","Read-only lookup",'{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}',1.0))
+    denied = ext_client.post(f"/api/extensions/mcp/{sid}/tools/lookup/proposals", json={"arguments":{"query":"test"}})
+    assert denied.status_code == 403
+    assert ext_client.post(f"/api/extensions/mcp/{sid}/tools/lookup/grant").json()["enabled"] is True
+    bad_args = ext_client.post(f"/api/extensions/mcp/{sid}/tools/lookup/proposals", json={"arguments":{}})
+    assert bad_args.status_code == 400
+    proposal = ext_client.post(f"/api/extensions/mcp/{sid}/tools/lookup/proposals", json={"arguments":{"query":"test"}})
+    assert proposal.status_code == 200
+    assert proposal.json()["status"] == "pending_review"
+    assert ext_client.get("/api/extensions/mcp/proposals").json()[0]["status"] == "pending_review"
+
+
+def test_approved_skills_are_available_to_coworker_prompt(ext_client):
+    created = ext_client.post("/api/extensions/skills", json={"name":"Cite sources","content":"Always cite URLs and dates."})
+    sid = created.json()["id"]
+    assert ext_client.post(f"/api/extensions/skills/{sid}/approve").status_code == 200
+    assert "Always cite URLs and dates." in extensions.active_skill_instructions()
