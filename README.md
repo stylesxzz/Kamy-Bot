@@ -33,7 +33,7 @@ O projeto preserva uma arquitetura simples e extensível baseada em **Python, Fa
 - **Finance:** registro e aprovação de propostas; envio de ordens reais permanece bloqueado.
 - **Kamy Intel:** casos de pesquisa e evidências provenientes de fontes públicas ou APIs autorizadas.
 
-> **Estado do produto:** Kamy Bot é um MVP funcional em evolução. Os coworkers, chat, políticas, aprovação, workspaces e auditoria fazem parte da aplicação atual. O runtime MCP ativo suporta somente Streamable HTTP HTTPS e exige allowlist de host. SSE e STDIO permanecem desativados. A conta administrativa é única nesta versão. Não confunda cadastro com conexão efetiva.
+> **Estado do produto:** Kamy Bot é um MVP funcional em evolução. Os coworkers, chat, políticas, aprovação, workspaces e auditoria fazem parte da aplicação atual. O Kamy é um aplicativo single-user executado localmente: não possui login administrativo, cadastro de usuários ou serviço multi-tenant. O runtime MCP suporta Streamable HTTP remoto com allowlist de host; STDIO ainda não é executado. Não confunda cadastro com conexão efetiva.
 
 ## Coworkers
 
@@ -145,11 +145,11 @@ Atalhos incluídos:
 
 ## Publicação na Internet com HTTPS (Caddy)
 
-A publicação pública deve ficar atrás de um proxy HTTPS. O Kamy continua escutando somente em `127.0.0.1:8000`; não abra a porta 8000 no firewall.
+O modo suportado é execução local, com o Kamy escutando em `127.0.0.1:8000`. Não exponha a interface diretamente à Internet. Para acesso remoto, prefira VPN privada/túnel autenticado e mantenha o serviço local.
 
 1. Configure um servidor Linux com Docker e um domínio cujo DNS A/AAAA aponte para o servidor.
 2. Libere somente TCP 80 e 443 no firewall; mantenha 8000 fechado para a Internet.
-3. No `.env`, defina `KAMY_DOMAIN`, `KAMY_ADMIN_USERNAME`, `KAMY_ADMIN_PASSWORD` (16+ caracteres), `KAMY_SESSION_SECRET` (32+ caracteres aleatórios), `KAMY_MASTER_KEY` e `KAMY_COOKIE_SECURE=1`.
+3. No `.env`, configure `KAMY_MASTER_KEY` para criptografar credenciais e mantenha `KAMY_BIND=127.0.0.1`. Não existe conta administrativa: a interface é acessível somente pela própria máquina.
 4. Inicie o Kamy com `docker compose up --build -d`.
 5. Instale o Caddy no host e copie `Caddyfile.example` para `Caddyfile`. O Caddy obtém e renova certificados TLS automaticamente.
 6. Exporte a variável do domínio e inicie o proxy:
@@ -159,7 +159,7 @@ export KAMY_DOMAIN=seu-dominio.com
 sudo --preserve-env=KAMY_DOMAIN caddy run --config ./Caddyfile
 ```
 
-Em produção, execute Caddy como serviço systemd e mantenha o arquivo de configuração protegido. Configure DNS, firewall, backup do volume Docker e backup separado das chaves. Não use um domínio de exemplo nem compartilhe o arquivo `.env`.
+Em produção, execute Caddy como serviço systemd e mantenha o arquivo de configuração protegido. Faça backup do volume Docker e da chave mestra em local seguro. Não compartilhe o arquivo `.env`.
 
 O proxy de exemplo aponta para `127.0.0.1:8000`, portanto Caddy deve rodar no mesmo host do Docker. Para proxy em outro container/host, use uma rede privada e ajuste o upstream sem publicar a porta do Kamy publicamente.
 
@@ -238,7 +238,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 cp .env.example .env
-# Edite .env e configure KAMY_ADMIN_PASSWORD, KAMY_SESSION_SECRET e KAMY_MASTER_KEY.
+# Edite .env e configure KAMY_MASTER_KEY.
 # Para HTTP local, mantenha KAMY_COOKIE_SECURE=0.
 set -a; . ./.env; set +a
 export KAMY_BROWSER_ENABLED=0
@@ -259,12 +259,7 @@ py -3.11 -m venv .venv
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 Copy-Item .env.example .env
-# Edite .env e defina KAMY_ADMIN_PASSWORD, KAMY_SESSION_SECRET e KAMY_MASTER_KEY.
-$env:KAMY_ADMIN_USERNAME = "admin"
-$env:KAMY_ADMIN_PASSWORD = "SUA-SENHA-FORTE-DE-16-OU-MAIS-CARACTERES"
-$env:KAMY_SESSION_SECRET = "SEU-SEGREDO-ALEATORIO-DE-32-OU-MAIS-CARACTERES"
-$env:KAMY_MASTER_KEY = "SUA-CHAVE-FERNET"
-$env:KAMY_COOKIE_SECURE = "0"
+# Edite .env e configure KAMY_MASTER_KEY.
 $env:KAMY_BROWSER_ENABLED = "0"
 python -m uvicorn app:app --host 127.0.0.1 --port 8000
 \`\`\`
@@ -330,18 +325,15 @@ As variáveis são documentadas em \`.env.example\`. O Docker Compose carrega au
 | \`KAMY_BROWSER_ENABLED\` | \`1\` no Docker | Habilita Playwright no container. Use \`0\` no modo nativo/Termux. |
 | \`KAMY_MASTER_KEY\` | vazio | Chave Fernet persistente para criptografar segredos/tokens OAuth. |
 
-### Criar credenciais administrativas e segredos de sessão
+### Chave local para proteger credenciais
 
-Gere valores aleatórios no terminal:
+Gere uma chave Fernet e guarde-a em segurança. Ela criptografa chaves de API e tokens OAuth armazenados localmente:
 
 ```bash
-python -c "import secrets; print('KAMY_ADMIN_PASSWORD='+secrets.token_urlsafe(24)); print('KAMY_SESSION_SECRET='+secrets.token_urlsafe(48))"
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Copie os valores para `.env`. Escolha um nome de usuário administrativo e nunca reutilize senha de outros serviços. A aplicação usa sessão assinada, cookie HttpOnly/SameSite=Strict, proteção CSRF para métodos que alteram dados e limitação básica de tentativas de login. Esta versão oferece uma conta administrativa única; ainda não é um sistema multiusuário com papéis.
-
-Para testar localmente em HTTP sem TLS, defina `KAMY_COOKIE_SECURE=0`. Em qualquer publicação HTTPS, mantenha `KAMY_COOKIE_SECURE=1`.
-
+Copie o resultado para `KAMY_MASTER_KEY` no `.env`. Se perder essa chave, os segredos criptografados não poderão ser recuperados.
 ### Gerar a chave mestra OAuth
 
 Com Python instalado:
@@ -400,7 +392,7 @@ Em desenvolvimento local, use o endereço de callback que o provedor aceite e qu
 - Operações financeiras reais permanecem desabilitadas.
 - Faça backup regular do volume Docker e da chave mestra OAuth.
 
-O gate de aprovação e as allowlists são controles da aplicação, não substitutos de isolamento de rede ou sandbox de execução. O runtime MCP aceita apenas hostnames exatos configurados em `KAMY_MCP_ALLOWED_HOSTS`, resolve DNS e rejeita endereços não públicos, não segue redirects e exige grant por ferramenta + aprovação por chamada. Para publicar: use HTTPS em proxy reverso, mantenha `KAMY_COOKIE_SECURE=1`, configure firewall, backups, monitoramento, rotação de segredos e restrinja a porta do container ao proxy. Não publique diretamente a porta 8000 na Internet. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. Esta versão protege um único administrador; não oferece RBAC, contas múltiplas ou isolamento multi-tenant. Antes de abrir o acesso a uma equipe, implemente identidade individual e autorização por função. Para qualquer exposição pública, acrescente rate limiting no proxy/WAF, monitoramento, política de egress da rede, backups testados e um pentest independente. A limitação de tentativas de login da aplicação é em memória e não substitui rate limiting no perímetro.
+As allowlists e confirmações são controles da aplicação, não substitutos de isolamento de rede ou sandbox de execução. O runtime MCP aceita apenas hostnames exatos configurados em `KAMY_MCP_ALLOWED_HOSTS`, resolve DNS e rejeita endereços não públicos, não segue redirects e exige grant por ferramenta + aprovação por chamada. Para publicar: use HTTPS em proxy reverso, mantenha `KAMY_COOKIE_SECURE=1`, configure firewall, backups, monitoramento, rotação de segredos e restrinja a porta do container ao proxy. Não publique diretamente a porta 8000 na Internet. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. O Kamy foi projetado para uso individual e local. Não o exponha diretamente à Internet: use VPN privada ou túnel seguro se precisar acessá-lo remotamente. A execução de ferramentas externas continua limitada por permissões, validação de argumentos e confirmação do usuário.
 
 ## Testes e validação local
 
@@ -420,7 +412,7 @@ No Windows, execute os mesmos comandos em um ambiente com Python, Node.js e Dock
 \`\`\`text
 Kamy-Bot/
 ├── app.py                    # Aplicação FastAPI e coworkers originais
-├── extensions.py             # Skills, OAuth, MCP, Finance e Intel APIs\n├── security.py               # Sessões administrativas, CSRF e headers de segurança
+├── extensions.py             # Skills, OAuth, MCP, Finance e Intel APIs\n├── security.py               # Restrição de acesso local e headers de segurança
 ├── requirements.txt          # Dependências do backend
 ├── requirements-browser.txt  # Dependências do navegador
 ├── Dockerfile
