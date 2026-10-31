@@ -29,7 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt pytest
       - name: Python syntax check
-        run: python -m compileall -q app.py extensions.py tests
+        run: python -m compileall -q app.py extensions.py security.py tests
       - name: Run tests
         run: pytest -q
       - name: Check frontend JavaScript syntax
