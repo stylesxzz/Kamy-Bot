@@ -61,7 +61,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             origin=request.headers.get("origin")
             if origin:
                 parsed=urlparse(origin)
-                if parsed.netloc!=request.url.netloc or parsed.scheme!=request.url.scheme:
+                if parsed.netloc!=request.url.netloc:
                     return JSONResponse({"detail":"Cross-origin request blocked"},status_code=403)
             csrf=request.headers.get("x-csrf-token","")
             if not csrf or not hmac.compare_digest(csrf,session.get("csrf","")) or csrf!=request.cookies.get(CSRF_COOKIE,""):
