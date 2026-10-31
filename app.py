@@ -167,13 +167,16 @@ def actions(agent_id:str|None=None,limit:int=100):
 async def decide(ident:str,b:dict):
  decision=b.get("decision")
  if decision not in ("approve","reject"):raise HTTPException(400,"Invalid decision")
- with conn() as c:r=c.execute("SELECT * FROM actions WHERE id=?",(ident,)).fetchone()
- if not r:raise HTTPException(404,"Action not found")
- if r["status"]!="pending":raise HTTPException(409,"Already decided")
- payload=json.loads(r["payload"]); a=agent(r["agent_id"])
+ # Atomically claim the pending action so concurrent requests cannot execute it twice.
+ with conn() as c:
+  r=c.execute("SELECT * FROM actions WHERE id=?",(ident,)).fetchone()
+  if not r:raise HTTPException(404,"Action not found")
+  cur=c.execute("UPDATE actions SET status='executing',decision=? WHERE id=? AND status='pending'",(decision,ident))
+  if not cur.rowcount:raise HTTPException(409,"Action is already being processed or has been decided")
  if decision=="reject":
-  with conn() as c:c.execute("UPDATE actions SET status='rejected',decision=?,result=?,finished=? WHERE id=?",(decision,json.dumps({"rejected":True}),now(),ident))
+  with conn() as c:c.execute("UPDATE actions SET status='rejected',result=?,finished=? WHERE id=? AND status='executing'",(json.dumps({"rejected":True}),now(),ident))
   return {"status":"rejected"}
+ payload=json.loads(r["payload"]); a=agent(r["agent_id"])
  try:
   tools=json.loads(a["tools"]); domains=json.loads(a["domains"]); kind=r["kind"]; result={}
   if kind not in tools:raise PermissionError("Tool not allowed")
@@ -190,10 +193,10 @@ async def decide(ident:str,b:dict):
    await ensure_browser(r["agent_id"]);result={"screenshot":True}
    await pages[r["agent_id"]].screenshot(path=str(WORK/r["agent_id"]/"latest.png"))
   else:raise PermissionError("Unknown action")
-  with conn() as c:c.execute("UPDATE actions SET status='executed',decision='approve',result=?,finished=? WHERE id=?",(json.dumps(result),now(),ident))
+  with conn() as c:c.execute("UPDATE actions SET status='executed',decision='approve',result=?,finished=? WHERE id=? AND status='executing'",(json.dumps(result),now(),ident))
   return {"status":"executed","result":result}
  except Exception as e:
-  with conn() as c:c.execute("UPDATE actions SET status='blocked',decision='approve',result=?,finished=? WHERE id=?",(json.dumps({"error":str(e)}),now(),ident))
+  with conn() as c:c.execute("UPDATE actions SET status='blocked',decision='approve',result=?,finished=? WHERE id=? AND status='executing'",(json.dumps({"error":str(e)}),now(),ident))
   raise HTTPException(403,"Blocked by policy: "+str(e))
 @app.get("/api/browser/{aid}/screenshot")
 async def shot(aid:str):
