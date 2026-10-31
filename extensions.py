@@ -342,3 +342,37 @@ async def mcp_approve(proposal_id:str):
         with db() as c:c.execute("UPDATE mcp_tool_proposals SET status='failed',result=?,decided=? WHERE id=? AND status='executing'",(json.dumps({"error":str(exc)[:500]}),time.time(),proposal_id))
         if isinstance(exc,HTTPException):raise
         raise HTTPException(502,"MCP tool execution failed.")
+
+
+def enabled_mcp_tools():
+    """OpenAI-compatible tool definitions for individually granted, active MCP tools."""
+    with db() as c:
+        rows=c.execute("SELECT s.id server_id,t.tool_name,t.description,t.input_schema FROM mcp_servers s JOIN mcp_tools t ON t.server_id=s.id JOIN mcp_tool_permissions p ON p.server_id=t.server_id AND p.tool_name=t.tool_name WHERE s.status!='disabled' AND s.transport='streamable-http' AND p.enabled=1 ORDER BY s.name,t.tool_name LIMIT 40").fetchall()
+    result=[]
+    for row in rows:
+        safe_name="kamy_mcp_"+row["server_id"].replace("-","")[:10]+"_"+hashlib.sha256(row["tool_name"].encode()).hexdigest()[:10]
+        try:schema=json.loads(row["input_schema"] or "{}")
+        except Exception:schema={"type":"object","properties":{}}
+        result.append({"type":"function","function":{"name":safe_name,"description":("MCP tool "+row["tool_name"]+": "+(row["description"] or ""))[:900],"parameters":schema}})
+    return result
+
+def queue_agent_mcp_proposal(function_name, arguments):
+    tools=enabled_mcp_tools()
+    match=None
+    for item in tools:
+        if item["function"]["name"]==function_name:
+            match=item;break
+    if not match:raise HTTPException(403,"MCP tool is not currently granted.")
+    with db() as c:
+        rows=c.execute("SELECT s.id server_id,t.tool_name,t.input_schema FROM mcp_servers s JOIN mcp_tools t ON t.server_id=s.id JOIN mcp_tool_permissions p ON p.server_id=t.server_id AND p.tool_name=t.tool_name WHERE s.status!='disabled' AND p.enabled=1").fetchall()
+        selected=None
+        for row in rows:
+            expected="kamy_mcp_"+row["server_id"].replace("-","")[:10]+"_"+hashlib.sha256(row["tool_name"].encode()).hexdigest()[:10]
+            if expected==function_name:selected=row;break
+        if not selected:raise HTTPException(403,"MCP tool permission was revoked.")
+        import jsonschema
+        try:jsonschema.validate(arguments,json.loads(selected["input_schema"] or "{}"))
+        except jsonschema.ValidationError as exc:raise HTTPException(400,"MCP tool arguments invalid: "+exc.message[:250])
+        ident=str(uuid.uuid4())
+        c.execute("INSERT INTO mcp_tool_proposals VALUES(?,?,?,?,?,?,?,?)",(ident,selected["server_id"],selected["tool_name"],json.dumps(arguments),"pending_review",None,time.time(),None))
+    return {"id":ident,"server_id":selected["server_id"],"tool_name":selected["tool_name"]}
