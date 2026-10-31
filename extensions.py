@@ -384,3 +384,71 @@ def mcp_reject(proposal_id:str):
         cur=c.execute("UPDATE mcp_tool_proposals SET status='rejected',decided=? WHERE id=? AND status='pending_review'",(time.time(),proposal_id))
         if not cur.rowcount:raise HTTPException(409,"MCP proposal not found or already processed.")
     return {"id":proposal_id,"status":"rejected"}
+
+
+class SkillImportIn(BaseModel):
+    raw_url: str = Field(min_length=20, max_length=1000)
+
+@router.post("/skills/import")
+async def import_skill(b: SkillImportIn):
+    """Import a declarative SKILL.md from GitHub raw content; never execute downloaded code."""
+    from urllib.parse import urlparse
+    parsed = urlparse(b.raw_url)
+    if parsed.scheme != "https" or parsed.hostname != "raw.githubusercontent.com" or not parsed.path.endswith("SKILL.md"):
+        raise HTTPException(400, "Use an HTTPS raw.githubusercontent.com URL ending in SKILL.md.")
+    try:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=False) as client:
+            response = await client.get(b.raw_url)
+        response.raise_for_status()
+    except httpx.HTTPError:
+        raise HTTPException(502, "Could not retrieve SKILL.md from GitHub.")
+    content = response.text
+    if not content.strip() or len(content) > 50000:
+        raise HTTPException(400, "SKILL.md is empty or exceeds 50 KB.")
+    fences = chr(96) * 3
+    if "<script" in content.lower() or fences+"python" in content.lower() or fences+"bash" in content.lower() or fences+"sh" in content.lower():
+        raise HTTPException(400, "Downloaded skill contains executable code and was rejected.")
+    name = parsed.path.split("/")[-2].replace("-", " ").replace("_", " ")[:80] or "Imported skill"
+    ident = str(uuid.uuid4())
+    with db() as c:
+        c.execute("INSERT INTO skills VALUES(?,?,?,?,?,?,?)", (ident, name, "Imported from GitHub; review before enabling.", content, b.raw_url, "pending_review", time.time()))
+    return {"id": ident, "name": name, "status": "pending_review", "source": b.raw_url}
+
+@router.delete("/skills/{sid}")
+def delete_skill(sid: str):
+    with db() as c:
+        cur = c.execute("DELETE FROM skills WHERE id=?", (sid,))
+        if not cur.rowcount:
+            raise HTTPException(404, "Skill not found.")
+    return {"deleted": True, "id": sid}
+
+@router.post("/oauth/{pid}/refresh")
+async def oauth_refresh(pid: str):
+    """Refresh an OAuth token when the provider issued a refresh token."""
+    with db() as c:
+        provider = c.execute("SELECT * FROM oauth_providers WHERE id=?", (pid,)).fetchone()
+        stored = c.execute("SELECT * FROM oauth_tokens WHERE provider_id=?", (pid,)).fetchone()
+    if not provider or not stored:
+        raise HTTPException(404, "OAuth provider or connection not found.")
+    refresh_token = unseal(stored["refresh_token"])
+    if not refresh_token:
+        raise HTTPException(409, "This provider did not issue a refresh token.")
+    secret = unseal(provider["client_secret"])
+    auth = (provider["client_id"], secret) if secret else None
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=False) as client:
+            response = await client.post(provider["token_url"], data={
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+                "client_id": provider["client_id"],
+            }, auth=auth, headers={"Accept": "application/json"})
+        response.raise_for_status()
+        token = response.json()
+    except Exception:
+        raise HTTPException(502, "OAuth token refresh failed; verify provider settings.")
+    if not token.get("access_token"):
+        raise HTTPException(502, "Provider did not return an access token.")
+    with db() as c:
+        c.execute("UPDATE oauth_tokens SET access_token=?,refresh_token=?,token_type=?,scope=?,expires_at=?,updated=? WHERE provider_id=?",
+            (seal(token["access_token"]), seal(token.get("refresh_token") or refresh_token), token.get("token_type","Bearer"), token.get("scope",stored["scope"]), time.time()+int(token.get("expires_in",3600)), time.time(), pid))
+    return {"refreshed": True, "provider": provider["name"]}
