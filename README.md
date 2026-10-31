@@ -143,25 +143,9 @@ Atalhos incluídos:
 - Linux/macOS: \`./start.sh\`
 - Windows: execute \`start.bat\` no Explorador ou no Prompt de Comando.
 
-## Publicação na Internet com HTTPS (Caddy)
+## Acesso remoto opcional
 
-O modo suportado é execução local, com o Kamy escutando em `127.0.0.1:8000`. Não exponha a interface diretamente à Internet. Para acesso remoto, prefira VPN privada/túnel autenticado e mantenha o serviço local.
-
-1. Configure um servidor Linux com Docker e um domínio cujo DNS A/AAAA aponte para o servidor.
-2. Libere somente TCP 80 e 443 no firewall; mantenha 8000 fechado para a Internet.
-3. No `.env`, configure `KAMY_MASTER_KEY` para criptografar credenciais e mantenha `KAMY_BIND=127.0.0.1`. Não existe conta administrativa: a interface é acessível somente pela própria máquina.
-4. Inicie o Kamy com `docker compose up --build -d`.
-5. Instale o Caddy no host e copie `Caddyfile.example` para `Caddyfile`. O Caddy obtém e renova certificados TLS automaticamente.
-6. Exporte a variável do domínio e inicie o proxy:
-
-```bash
-export KAMY_DOMAIN=seu-dominio.com
-sudo --preserve-env=KAMY_DOMAIN caddy run --config ./Caddyfile
-```
-
-Em produção, execute Caddy como serviço systemd e mantenha o arquivo de configuração protegido. Faça backup do volume Docker e da chave mestra em local seguro. Não compartilhe o arquivo `.env`.
-
-O proxy de exemplo aponta para `127.0.0.1:8000`, portanto Caddy deve rodar no mesmo host do Docker. Para proxy em outro container/host, use uma rede privada e ajuste o upstream sem publicar a porta do Kamy publicamente.
+O Kamy é local-first e bloqueia conexões que não sejam loopback. Não publique a porta 8000 nem altere `KAMY_BIND` para `0.0.0.0`. Se precisar acessar de outro dispositivo, configure uma VPN privada ou túnel autenticado que encaminhe a conexão ao `127.0.0.1` da máquina; não exponha o servidor diretamente à Internet.
 
 ## Comandos de operação Docker
 
@@ -285,7 +269,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 cp .env.example .env
 # Edite .env e configure KAMY_MASTER_KEY.
-# Para HTTP local, mantenha KAMY_COOKIE_SECURE=0.
+# O Kamy aceita apenas conexões locais; configure KAMY_MASTER_KEY no .env.
 set -a; . ./.env; set +a
 export KAMY_BROWSER_ENABLED=0
 uvicorn app:app --host 127.0.0.1 --port 8000
@@ -306,8 +290,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 cp .env.example .env
-# Edite .env: defina senha, KAMY_SESSION_SECRET e KAMY_MASTER_KEY.
-# Para HTTP local, configure KAMY_COOKIE_SECURE=0.
+# Edite .env e configure KAMY_MASTER_KEY.
 set -a; . ./.env; set +a
 export KAMY_BROWSER_ENABLED=0
 python -m uvicorn app:app --host 127.0.0.1 --port 8000
@@ -383,7 +366,7 @@ Em desenvolvimento local, use o endereço de callback que o provedor aceite e qu
 
 - Docker Compose publica em \`127.0.0.1\` por padrão.
 - Não altere \`KAMY_BIND\` para \`0.0.0.0\` em uma rede pública sem uma camada de autenticação, HTTPS, firewall e revisão de segurança.
-- A aplicação exige login administrativo, sessão assinada e proteção CSRF nas rotas privadas. Há uma única conta administrativa nesta versão; não há RBAC/multiusuário.
+- A aplicação não tem login nem conta administrativa. O acesso é limitado ao loopback da própria máquina.
 - Não coloque chaves de API, senhas ou tokens no Git, em Issues ou em Skills.
 - Revise conteúdo de Skills e origem de servidores MCP antes de cadastrá-los.
 - Conceda o menor conjunto possível de escopos OAuth.
@@ -391,7 +374,7 @@ Em desenvolvimento local, use o endereço de callback que o provedor aceite e qu
 - Operações financeiras reais permanecem desabilitadas.
 - Faça backup regular do volume Docker e da chave mestra OAuth.
 
-As allowlists e confirmações são controles da aplicação, não substitutos de isolamento de rede ou sandbox de execução. O runtime MCP aceita apenas hostnames exatos configurados em `KAMY_MCP_ALLOWED_HOSTS`, resolve DNS e rejeita endereços não públicos, não segue redirects e exige grant por ferramenta. A confirmação do usuário deve ser reservada a operações com efeitos externos ou financeiros. Para publicar: use HTTPS em proxy reverso, mantenha `KAMY_COOKIE_SECURE=1`, configure firewall, backups, monitoramento, rotação de segredos e restrinja a porta do container ao proxy. Não publique diretamente a porta 8000 na Internet. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. O Kamy foi projetado para uso individual e local. Não o exponha diretamente à Internet: use VPN privada ou túnel seguro se precisar acessá-lo remotamente. A execução de ferramentas externas continua limitada por permissões, validação de argumentos e confirmação do usuário.
+As allowlists e confirmações são controles da aplicação, não substitutos de isolamento de rede ou sandbox de execução. O runtime MCP aceita apenas hostnames exatos configurados em `KAMY_MCP_ALLOWED_HOSTS`, resolve DNS e rejeita endereços não públicos, não segue redirects e exige grant por ferramenta. A confirmação do usuário deve ser reservada a operações com efeitos externos ou financeiros. Mantenha o serviço em loopback e não publique diretamente a porta 8000 na Internet. As chaves de API dos coworkers e os segredos/tokens OAuth são criptografados em repouso quando `KAMY_MASTER_KEY` está configurada; preserve essa chave para manter acesso aos dados. O Kamy foi projetado para uso individual e local. Não o exponha diretamente à Internet: use VPN privada ou túnel seguro se precisar acessá-lo remotamente. A execução de ferramentas externas continua limitada por permissões, validação de argumentos e confirmação do usuário.
 
 ## Testes e validação local
 
