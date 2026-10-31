@@ -106,3 +106,17 @@ def test_provider_api_keys_are_encrypted_at_rest(client, monkeypatch):
         stored = db.execute("SELECT api_key FROM agents WHERE id=?", (created.json()["id"],)).fetchone()["api_key"]
     assert stored.startswith("fernet:")
     assert "secret-provider-key" not in stored
+
+
+def test_admin_authentication_and_csrf_are_required(client):
+    _, kamy = client
+    with TestClient(kamy.app) as anonymous:
+        assert anonymous.get("/api/agents").status_code == 401
+        assert "Entrar no Kamy Bot" in anonymous.get("/").text
+        assert anonymous.post("/api/auth/login", json={"username":"admin","password":"wrong-password-000"}).status_code == 401
+        login = anonymous.post("/api/auth/login", json={"username":"admin","password":"test-password-at-least-16"})
+        assert login.status_code == 200
+        assert anonymous.post("/api/agents", json={"name":"Blocked","role":"Test"}).status_code == 403
+        anonymous.headers.update({"X-CSRF-Token": anonymous.cookies.get("kamy_csrf")})
+        assert anonymous.get("/api/auth/me").json()["authenticated"] is True
+        assert anonymous.post("/api/agents", json={"name":"Allowed","role":"Test"}).status_code == 200
