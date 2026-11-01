@@ -2,11 +2,11 @@
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),os=require("node:os"),crypto=require("node:crypto"),http=require("node:http");
 const {spawn,spawnSync}=require("node:child_process");
-const VERSION="1.2.1",PACKAGE_ROOT=path.resolve(__dirname,"..");
+const VERSION="1.2.2",PACKAGE_ROOT=path.resolve(__dirname,"..");
 const INSTALL_ROOT=path.resolve(process.env.KAMY_HOME||path.join(os.homedir(),".kamy-bot")),APP_DIR=path.join(INSTALL_ROOT,"app");
 const RUNTIME_FILES=["app.py","extensions.py","security.py","requirements.txt","requirements-browser.txt",".env.example","Dockerfile","docker-compose.yml","static","assets"];
-function help(){console.log("Kamy Bot "+VERSION+" — local AI companion\n\nUsage:\n  npm exec --yes --package=kamy-bot -- kamy-bot              Install/update and start the native local app\n  npm exec --yes --package=kamy-bot -- kamy-bot --docker     Start with Docker and isolated Chromium browser\n  npm exec --yes --package=kamy-bot -- kamy-bot --no-open    Do not open the browser automatically\n  npm exec --yes --package=kamy-bot -- kamy-bot --port 9000  Use a different localhost port\n  npm exec --yes --package=kamy-bot -- kamy-bot --help       Show this help\n\nRequirements: Node.js 18+ and Python 3.11+.\nDocker Engine/Desktop is required only for --docker.\nLocal files: "+INSTALL_ROOT+"\n")}
-function run(command,args,options){const result=spawnSync(command,args,Object.assign({stdio:"inherit"},options||{}));if(result.error)throw result.error;if(result.status!==0)throw new Error("Command failed: "+command+" "+args.join(" "))}
+function help(){console.log("Kamy Bot "+VERSION+" — local AI companion\n\nUsage:\n  npm exec --yes --package=kamy-bot -- kamy-bot              Install/update and start the native local app\n  npm exec --yes --package=kamy-bot -- kamy-bot --docker     Start with Docker and isolated Chromium browser\n  npm exec --yes --package=kamy-bot -- kamy-bot --no-open    Do not open the browser automatically\n  npm exec --yes --package=kamy-bot -- kamy-bot --port 9000  Use a different localhost port\n  npm exec --yes --package=kamy-bot -- kamy-bot --help       Show this help\n\nRequirements: Node.js 18+ and Python 3.11+. The launcher creates/validates .venv and installs requirements.txt before starting the server.\nDocker Engine/Desktop is required only for --docker.\nLocal files: "+INSTALL_ROOT+"\n")}
+function run(command,args,options){const result=spawnSync(command,args,Object.assign({stdio:"inherit"},options||{}));if(result.error)throw result.error;if(result.status!==0)throw new Error("Command failed (exit "+result.status+"): "+command+" "+args.join(" "))}
 function commandWorks(command,args){const result=spawnSync(command,args||["--version"],{stdio:"ignore"});return !result.error&&result.status===0}
 function findPython(){
  const candidates=process.platform==="win32"?[{command:"py",prefix:["-3"]},{command:"python",prefix:[]}]:[{command:"python3",prefix:[]},{command:"python",prefix:[]}];
@@ -27,10 +27,38 @@ function prepareEnv(){
 function parseEnv(content){const values={};for(const line of content.split(/\r?\n/)){const match=line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);if(!match||match[1].startsWith("#"))continue;let value=match[2];if((value.startsWith('"')&&value.endsWith('"'))||(value.startsWith("'")&&value.endsWith("'")))value=value.slice(1,-1);values[match[1]]=value}return values}
 function loadLocalEnv(content){for(const [key,value] of Object.entries(parseEnv(content)))if(process.env[key]===undefined)process.env[key]=value;process.env.KAMY_DATA_DIR=path.join(APP_DIR,"data")}
 function installVenv(python){
- const venvPython=process.platform==="win32"?path.join(APP_DIR,".venv","Scripts","python.exe"):path.join(APP_DIR,".venv","bin","python");
- if(!fs.existsSync(venvPython)){console.log("Criando ambiente virtual Python (.venv)...");run(python.command,[...python.prefix,"-m","venv",".venv"],{cwd:APP_DIR})}
- const requirementsPath=path.join(APP_DIR,"requirements.txt"),digest=crypto.createHash("sha256").update(fs.readFileSync(requirementsPath)).digest("hex"),marker=path.join(APP_DIR,".venv",".kamy-requirements-sha256");
- if(!fs.existsSync(marker)||fs.readFileSync(marker,"utf8").trim()!==digest){console.log("Instalando/atualizando requirements.txt no .venv...");run(venvPython,["-m","pip","install","--disable-pip-version-check","--upgrade","pip"],{cwd:APP_DIR});run(venvPython,["-m","pip","install","--disable-pip-version-check","--only-binary=pydantic-core","-r",requirementsPath],{cwd:APP_DIR});fs.writeFileSync(marker,digest+"\n","utf8")}
+ const venvDir=path.join(APP_DIR,".venv");
+ const venvPython=process.platform==="win32"?path.join(venvDir,"Scripts","python.exe"):path.join(venvDir,"bin","python");
+ const cwd=APP_DIR;
+ const validVenv=()=>{const check=spawnSync(venvPython,["-c","import sys; assert sys.prefix != sys.base_prefix; print(sys.executable)"],{encoding:"utf8"});return !check.error&&check.status===0};
+ if(!validVenv()){
+  if(fs.existsSync(venvDir)){console.log("O .venv existente está incompleto ou inválido; recriando apenas o ambiente virtual...");fs.rmSync(venvDir,{recursive:true,force:true})}
+  console.log("Criando ambiente virtual Python em "+venvDir);
+  run(python.command,[...python.prefix,"-m","venv",venvDir],{cwd});
+ }
+ if(!validVenv())throw new Error("Não foi possível iniciar o Python dentro de .venv. Reinstale Python 3.11+ com suporte a venv/ensurepip.");
+ const pipCheck=spawnSync(venvPython,["-m","pip","--version"],{encoding:"utf8"});
+ if(pipCheck.error||pipCheck.status!==0)run(venvPython,["-m","ensurepip","--upgrade"],{cwd});
+ const requirementsPath=path.join(APP_DIR,"requirements.txt");
+ const digest=crypto.createHash("sha256").update(fs.readFileSync(requirementsPath)).digest("hex");
+ const marker=path.join(venvDir,".kamy-requirements-sha256");
+ const markerMatches=fs.existsSync(marker)&&fs.readFileSync(marker,"utf8").trim()===digest;
+ const importsCheck=spawnSync(venvPython,["-c","import fastapi,uvicorn,httpx,pydantic,cryptography,jsonschema,mcp"],{stdio:"ignore"});
+ if(!markerMatches||importsCheck.error||importsCheck.status!==0){
+  console.log("Instalando requirements.txt usando o Python do .venv...");
+  console.log("Interpretador: "+venvPython);
+  run(venvPython,["-m","pip","install","--disable-pip-version-check","--upgrade","pip"],{cwd});
+  run(venvPython,["-m","pip","install","--disable-pip-version-check","--only-binary=pydantic-core","-r",requirementsPath],{cwd});
+  const verify=spawnSync(venvPython,["-c","import fastapi,uvicorn,httpx,pydantic,cryptography,jsonschema,mcp; print('Python environment OK')"],{encoding:"utf8"});
+  if(verify.error||verify.status!==0)throw new Error("As dependências foram instaladas, mas a validação de imports falhou. Execute o comando novamente e confira o erro acima.");
+  fs.writeFileSync(marker,digest+"\n","utf8");
+  console.log("Dependências instaladas e verificadas dentro de .venv.");
+ }else{
+  console.log("Ambiente .venv e requirements.txt já estão atualizados.");
+ }
+ process.env.VIRTUAL_ENV=venvDir;
+ process.env.PATH=path.dirname(venvPython)+path.delimiter+(process.env.PATH||"");
+ console.log("Ambiente virtual ativo: "+venvPython);
  return venvPython;
 }
 function openBrowser(url){
