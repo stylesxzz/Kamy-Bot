@@ -1,178 +1,184 @@
 <div align="center">
   <img src="assets/kamy-mascot.svg" width="132" alt="Mascote Kamy — estrela verde" />
   <h1>KAMY BOT</h1>
-  <p><strong>Seu espaço local de trabalho com IA.</strong></p>
-  <p>Um aplicativo open source, individual e local-first. Seus coworkers, credenciais, Skills, MCPs, conexões e arquivos ficam na sua própria máquina.</p>
-  <img src="assets/brand-palette.svg" width="100%" alt="Identidade visual Kamy Bot — Ivory, Frosted Mint, Malachite, Forest Green e Evergreen" />
-  <p><a href="#instalação">Instalação</a> · <a href="#configurações">Configurações</a> · <a href="#segurança">Segurança</a> · <a href="LICENSE">MIT License</a></p>
+  <p><strong>Seu assistente de IA local em uma ilha flutuante.</strong></p>
+  <p>Open source · Individual · Desktop · Local-first</p>
+  <img src="assets/brand-palette.svg" width="100%" alt="Paleta Kamy Bot — Ivory, Frosted Mint, Malachite, Forest Green e Evergreen" />
+  <p><a href="#instalação">Instalação</a> · <a href="#ilha-flutuante">Ilha flutuante</a> · <a href="#configuração-da-api">API</a> · <a href="#segurança-e-dados">Segurança</a></p>
 </div>
 
 ---
 
 ## O que é
 
-Kamy Bot é um aplicativo de desktop/local acessado pelo navegador. Você baixa e executa uma única instalação no seu próprio computador. **Não é SaaS, não é multiusuário, não conecta instalações entre si e não possui painel administrativo ou camada de operador.**
+Kamy Bot é um aplicativo de desktop/local para uma única pessoa. Ele abre como uma pequena ilha flutuante que pode ficar sobre outras janelas. Quando você precisa de todas as ferramentas, expande para tela cheia.
 
-Cada instalação mantém seus próprios dados SQLite, workspaces, chaves de API, integrações, Skills, servidores MCP e configurações. O backend local usa FastAPI/Python e a interface é servida em localhost.
+**Não é SaaS, não é multiusuário, não conecta instalações e não possui painel administrativo ou camada de operador.** Seus agentes, conversas, credenciais, Skills, servidores MCP, conexões e arquivos pertencem à sua instalação local.
 
-## Identidade visual
+O backend usa Python/FastAPI em localhost. A janela desktop usa Electron; o navegador continua disponível como alternativa.
 
-A identidade segue a paleta Malachite em uma interface clara: branco/off-white nas superfícies e no fundo, verde nas ações, ícones, bordas de destaque e estados:
+## Ilha flutuante
 
-| Cor | HEX | Uso |
-|---|---|---|
-| Ivory | **#FFFFFF** | Fundo e superfícies principais |
-| Frosted Mint | **#E9FFCA** | Texto de destaque e superfícies suaves |
-| Malachite | **#25E970** | Ações, foco e realces |
-| Forest Green | **#238926** | Bordas, estados e superfícies |
-| Evergreen | **#143D23** | Tipografia e detalhes escuros |
+- **Janela compacta:** abre uma janela frameless, redimensionável e sempre no topo quando o sistema operacional permite.
+- **Escolha do agente:** alterne entre NOVA, PIXEL, SCOUT e seus agentes personalizados diretamente no seletor da ilha.
+- **Tela cheia:** expande a janela para acessar histórico, permissões, extensões, integrações e configurações.
+- **Voz:** o microfone usa reconhecimento de fala do navegador em português brasileiro (pt-BR). A transcrição aparece no campo de mensagem para você revisar antes de enviar.
+- **Atalho para voltar:** use o controle de recolher para retornar à ilha compacta.
+- **Fallback:** quando o Electron não estiver instalado ou não for suportado, o launcher abre a interface local no navegador. Use --web para escolher o navegador explicitamente.
 
-O mascote foi redesenhado como uma estrela de quatro pontas, inspirado no símbolo da referência visual. Os vetores oficiais ficam em assets/kamy-mascot.svg e assets/kamy-mark.svg.
+O reconhecimento de fala depende do suporte do Chromium e das permissões de microfone do sistema. Alguns mecanismos de reconhecimento podem precisar de conexão com a Internet. A voz é convertida em texto; o envio da mensagem continua sob seu controle.
+
+**Linux/Wayland:** alguns compositores Wayland não permitem que aplicativos imponham a posição “sempre no topo”. O Kamy detecta Wayland e evita afirmar que o comportamento está garantido nessa sessão.
 
 ## Recursos
 
-- **Coworkers:** NOVA, PIXEL, SCOUT e coworkers personalizados, cada um com conversa e workspace local separado.
-- **NVIDIA NIM:** chat compatível com Chat Completions, chave padrão criptografada ou chave individual por coworker e modelo configurável. A tela confirma a gravação consultando o valor persistido e nunca mostra a chave de volta. As chaves gravadas em versões anteriores continuam válidas: o leitor de Fernet usa agora o deslocamento correto do prefixo `fernet:` (7 caracteres).
-- **Settings:** tamanho do texto, alto contraste, espaçamento, redução de movimento, provedor NVIDIA, modelo, chaves individuais e diagnóstico do runtime.
-- **Audit trail:** registro de propostas, aprovações, rejeições, execuções e bloqueios.
-- **Permissions:** ferramentas e domínios permitidos por coworker; a política é revalidada antes de executar a ação.
-- **Skills:** importar e revisar instruções declarativas SKILL.md, habilitar, desabilitar e excluir.
-- **MCP:** cadastro de servidores Streamable HTTP e STDIO, descoberta de ferramentas, permissão individual e chamada sujeita a aprovação.
-- **OAuth:** Authorization Code + PKCE para provedores HTTP MCP compatíveis. Tokens e segredos são criptografados localmente.
-- **Finance / Binance:** cotação Spot pública, consulta privada de saldos e ordens de teste ou reais com confirmação explícita.
+- **Agentes:** NOVA (pesquisa), PIXEL (desenvolvimento), SCOUT (navegação) e agentes personalizados, com conversas e workspaces locais separados.
+- **NVIDIA NIM:** Chat Completions, modelo configurável, chave padrão e chaves individuais por agente.
+- **Configurações:** aparência, escala de texto, alto contraste, espaçamento, redução de movimento, provedor, runtime e conexões.
+- **Histórico de ações:** propostas, aprovações, rejeições, execuções e bloqueios.
+- **Permissões:** ferramentas e domínios aprovados por agente; as políticas são revalidadas antes da execução.
+- **Skills:** importar, revisar, ativar, desativar e remover instruções declarativas SKILL.md.
+- **MCP:** servidores locais STDIO e Streamable HTTP, descoberta de ferramentas e execução com aprovação.
+- **OAuth:** Authorization Code + PKCE para conexões HTTP MCP compatíveis. Segredos e tokens ficam criptografados localmente.
+- **Finance / Binance:** cotações públicas, consulta privada de saldos e ordens de teste ou reais com confirmação explícita.
 - **Kamy Intel:** casos locais e registro de evidências, fontes, URLs e datas observadas.
 
-### Limites funcionais importantes
+### Limites funcionais
 
-- O modelo só responde com NVIDIA depois que você configura uma chave válida.
-- O runtime nativo não habilita Playwright/Chromium. Para automação de navegador use Docker com --docker.
-- O MCP STDIO executa localmente o comando que você cadastrou, com as permissões do seu sistema. Revise o binário e os argumentos.
-- Skills são instruções em Markdown. O conteúdo importado não é executado como programa.
-- OAuth não configura a Binance. A integração Binance é independente.
-- Ordens reais da Binance podem causar perdas financeiras. Use Testnet primeiro e uma API key sem permissão de saque.
-- Kamy Intel registra e organiza evidências. Pesquisa automática na Internet depende de um MCP ou provedor configurado.
+- O chat com NVIDIA exige uma chave válida e um identificador de modelo suportado pela NVIDIA.
+- O runtime nativo não habilita Playwright/Chromium headless; use --docker para o navegador de automação isolado.
+- Servidores MCP STDIO executam programas na própria máquina, com as permissões do usuário local. Revise o comando e os argumentos.
+- Skills são instruções em Markdown; o conteúdo importado não é executado como programa.
+- Ordens reais da Binance podem causar perdas. Use Testnet primeiro e uma API key sem permissão de saque.
+- Pesquisa automática na Internet depende de um MCP ou provedor de pesquisa que você configurar.
 
 ## Instalação
 
 ### Requisitos
 
 - Node.js 18 ou superior.
-- Python 3.11 ou superior (incluindo Python 3.14).
-- Conexão com a Internet na primeira instalação, para baixar as dependências Python.
-- Docker Engine/Desktop somente para o modo com navegador isolado.
+- Python 3.11 ou superior.
+- Conexão com a Internet na primeira execução, para baixar as dependências.
+- Electron é instalado como dependência opcional do pacote. Se a plataforma não oferecer esse runtime, o Kamy abre no navegador.
+- Docker Engine/Desktop somente para o modo de automação de navegador.
 
-### Inicialização rápida
+### Instalação rápida
 
-Com o repositório clonado na pasta `Kamy-Bot`, execute a partir da pasta que contém esse diretório:
-
-~~~bash
-npm exec --yes --package=./Kamy-Bot -- kamy-bot
-~~~
-
-Na primeira execução, o comando prepara automaticamente:
-
-1. A pasta pessoal ~/.kamy-bot/app (ou o caminho definido em KAMY_HOME).
-2. O ambiente virtual Python .venv.
-3. O arquivo privado .env, com uma chave Fernet gerada localmente.
-4. As dependências de requirements.txt.
-5. O banco SQLite e a pasta data/.
-6. O servidor local e a abertura do navegador em http://127.0.0.1:8765.
-
-Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir `.env`, o `.venv` válido ou os dados do usuário. Se o `.venv` estiver incompleto/inválido, somente essa pasta será recriada. Para preparar o ambiente sem abrir o app, use `npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only`. A versão 1.2.6 atualiza Pydantic para 2.13.5, cujo pydantic-core 2.46.5 oferece wheels binárias para CPython 3.14. O launcher verifica que o interpretador está realmente dentro de `.venv`, repara um ambiente virtual incompleto, instala as dependências com esse interpretador, valida os imports e só inicia o servidor depois dessas verificações.
-
-> **Importante:** `--package=Kamy-Bot` sem `./` é interpretado como nome de pacote do registro npm e falha porque nomes publicados não aceitam letras maiúsculas. `--package=./Kamy-Bot` aponta para a pasta local do clone e usa o `package.json` dali.
+Com o repositório clonado em uma pasta chamada Kamy-Bot, execute o comando a partir da pasta que contém esse diretório:
 
 ~~~bash
 git clone https://github.com/stylesxzz/Kamy-Bot.git
+npm exec --yes --package=./Kamy-Bot -- kamy-bot
+~~~
+
+O comando prepara automaticamente:
+
+1. ~/.kamy-bot/app (ou o diretório informado por KAMY_HOME).
+2. O ambiente virtual Python .venv.
+3. O arquivo .env privado, sem substituir a chave já existente.
+4. As dependências listadas em requirements.txt.
+5. O banco SQLite e os workspaces locais.
+6. O servidor FastAPI em 127.0.0.1.
+7. A ilha flutuante Electron, se o runtime estiver disponível; caso contrário, abre o navegador.
+
+O launcher preserva .env, .venv válido e dados locais ao atualizar os arquivos do app. Se o ambiente virtual estiver incompleto, somente .venv será recriado.
+
+### Comandos
+
+| Comando | Ação |
+|---|---|
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot | Inicia a ilha flutuante (padrão) |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --web | Abre a interface no navegador |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --no-open | Inicia o servidor sem abrir uma janela |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --docker | Inicia com Docker e Playwright isolado |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --port 9000 | Usa outra porta local |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only | Prepara .venv e dependências sem iniciar o app |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --help | Mostra a ajuda |
+
+Também é possível iniciar diretamente após clonar:
+
+~~~bash
 cd Kamy-Bot
 node ./bin/kamy-bot.js
 ~~~
 
+### Docker com navegador de automação
 
-### Corrigir uma instalação antiga com Python 3.14
-
-Se uma execução anterior parou em `Building wheel for pydantic-core`, não apague seu diretório `.env` nem os dados. Atualize o Kamy para a versão 1.2.1 e execute novamente o launcher. A alteração no hash de `requirements.txt` fará o instalador atualizar as dependências dentro do `.venv`.
-
-Também é possível atualizar manualmente a instalação existente:
-
-~~~bash
-cd ~/.kamy-bot/app
-./.venv/bin/python -m pip install --upgrade pip
-./.venv/bin/python -m pip install --only-binary=pydantic-core -r requirements.txt
-~~~
-
-A versão antiga de Pydantic (2.11.4) puxava uma versão de `pydantic-core` com PyO3 0.24.1, que não reconhece Python 3.14. O projeto agora usa Pydantic 2.14.1 e `pydantic-core` 2.50.1, que publica wheels CPython 3.14 para Linux x86-64 e ARM64, entre outras plataformas. Se sua plataforma não tiver wheel compatível, o pip interromperá com uma mensagem de wheel indisponível em vez de iniciar uma compilação Rust inesperada.
-
-### Docker com navegador isolado
-
-Em computadores com Docker instalado e iniciado:
+Em um computador com Docker instalado e iniciado:
 
 ~~~bash
 npm exec --yes --package=./Kamy-Bot -- kamy-bot --docker
 ~~~
 
-O modo Docker constrói a imagem Playwright, inicia Chromium no container e persiste os dados no volume kamy_data. O Docker **não é instalado automaticamente** pelo CLI, pois isso exige permissões administrativas e varia por sistema operacional. Instale e inicie o Docker Desktop/Engine antes de usar esta opção.
+O modo Docker constrói a imagem com Playwright/Chromium e persiste o banco e os workspaces no volume kamy_data. O Docker não é instalado automaticamente pelo Kamy.
 
-### Opções do CLI
+### Linux, Windows e macOS
 
-| Comando | Comportamento |
-|---|---|
-| npm exec --yes --package=./Kamy-Bot -- kamy-bot | Prepara o ambiente Python e inicia o modo local |
-| npm exec --yes --package=./Kamy-Bot -- kamy-bot --docker | Inicia com Docker e browser Playwright |
-| npm exec --yes --package=./Kamy-Bot -- kamy-bot --no-open | Inicia sem abrir o navegador |
-| npm exec --yes --package=./Kamy-Bot -- kamy-bot --port 9000 | Usa outra porta local |
-| npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only | Prepara .venv e instala requirements.txt sem iniciar o servidor |
-| npm exec --yes --package=./Kamy-Bot -- kamy-bot --help | Mostra a ajuda |
+Instale Node.js 18+ e Python 3.11+. Clone o repositório e execute o comando npm da instalação rápida. No Windows, o launcher usa py -3 quando disponível. No Linux, a ilha depende do suporte de janelas do ambiente gráfico.
 
-### Sistemas operacionais
+### Android / Termux
 
-**Linux (Debian/Kali/Ubuntu):** instale Node.js 18+ e Python 3.11+. Depois da publicação no npm, execute o comando npm exec acima. Para o modo Docker, instale Docker Engine com o plugin Compose.
+Termux pode executar o backend local:
 
-**Windows:** instale Node.js 18+ e Python 3.11+. No PowerShell, execute node .\bin\kamy-bot.js depois de clonar o repositório. O CLI usa o launcher py -3 quando disponível.
+~~~bash
+pkg update -y
+pkg install -y nodejs-lts python git
+git clone https://github.com/stylesxzz/Kamy-Bot.git
+cd Kamy-Bot
+node ./bin/kamy-bot.js --web
+~~~
 
-**macOS:** instale Node.js 18+ e Python 3.11+. No Terminal, execute o comando npm exec acima. Docker Desktop é opcional.
+Em Termux sem uma sessão gráfica compatível com Electron, use --web e abra a interface no navegador. A ilha desktop nativa é destinada a ambientes com suporte a janelas de desktop.
 
-**Android / Termux:** instale Termux de uma fonte oficial, depois execute `pkg update -y && pkg install -y nodejs-lts python`. Clone o repositório e execute o comando npm exec acima a partir da pasta que contém `Kamy-Bot`. O modo nativo funciona sem Playwright; Docker não é suportado como requisito do fluxo Termux.
+## Configuração da API
 
-## Configurações
+Abra **Configurações → NVIDIA NIM padrão** e informe o identificador do modelo NVIDIA e sua NVIDIA API key.
 
-Abra **Settings** na barra lateral:
+Pressione **Salvar provedor**. O Kamy confirma a gravação no banco local e limpa o campo da chave depois da confirmação. A interface não recebe a chave de volta.
 
-- **Interface:** escala do texto, alto contraste, espaçamento compacto e redução de animações. As preferências visuais são armazenadas localmente no navegador.
-- **NVIDIA NIM:** modelo padrão e chave global cifrada com a chave mestra local. Coworkers sem chave própria usam o provedor padrão.
-- **Por coworker:** modelo e chave individual. Uma chave individual tem prioridade sobre a chave global.
-- **Runtime:** endereço/porta, pasta de dados, disponibilidade do Playwright e estado da chave mestra.
-- **Integrações:** atalhos para Extensions e Permissions. Configure Skills, MCP, OAuth e Finance nas telas correspondentes.
+Você também pode definir uma chave individual por agente. Uma chave particular tem prioridade sobre a chave padrão.
 
-As credenciais nunca são devolvidas à interface após serem salvas. Para remover uma chave, use a opção explícita de remoção.
+### Persistência da chave mestra
 
-## Estrutura e dados locais
+O Kamy usa Fernet para criptografar as credenciais em repouso:
+
+1. Se KAMY_MASTER_KEY estiver definida, ela é usada.
+2. Caso contrário, o Kamy procura uma chave já existente no .env local.
+3. Se nenhuma estiver disponível, cria uma chave estável em data/.master_key, com permissões de arquivo restritas ao usuário (0600 quando suportado).
+
+A chave não é regenerada se o arquivo já existir. **Mantenha a chave mestra e a pasta de dados juntas e faça backup seguro.** Apagar ou substituir a chave pode tornar as credenciais antigas irrecuperáveis.
+
+Se você já tem credenciais criptografadas, não apague o .env nem data/.master_key para “corrigir” uma falha de gravação.
+
+## Dados locais
 
 ~~~text
 ~/.kamy-bot/
 └── app/
-    ├── .env                  # chave mestra e opções locais
+    ├── .env                  # configurações locais e chave mestra, se definida
     ├── .venv/                # ambiente virtual Python
-    ├── app.py
-    ├── extensions.py
-    ├── security.py
-    ├── requirements.txt
-    ├── static/               # interface, estilos e scripts
+    ├── app.py                # backend FastAPI
+    ├── security.py           # limites locais e chave criptográfica
+    ├── desktop/              # janela Electron e preload seguro
+    ├── static/               # ilha, interface, estilos e scripts
     ├── assets/               # marca e mascote SVG
-    └── data/                 # bancos SQLite e workspaces
+    └── data/
+        ├── .master_key       # chave mestra local gerada automaticamente, se necessária
+        ├── kamy.sqlite3      # conversas, configurações e histórico
+        └── workspaces/       # arquivos isolados por agente
 ~~~
 
-KAMY_HOME altera a pasta de instalação. KAMY_DATA_DIR é definido pelo launcher para a pasta de dados da instalação. Mantenha .env em backup seguro: perder KAMY_MASTER_KEY pode tornar credenciais criptografadas irrecuperáveis.
+KAMY_HOME altera o diretório de instalação. KAMY_DATA_DIR altera o local dos dados usado pelo backend.
 
-## Segurança
+## Segurança e dados
 
-- O servidor permanece vinculado a 127.0.0.1 por padrão e rejeita solicitações remotas.
+- O servidor escuta em 127.0.0.1 por padrão e rejeita solicitações remotas.
 - Não exponha a porta local à Internet.
-- Chaves de provedor, OAuth e Binance são armazenadas criptografadas usando Fernet e KAMY_MASTER_KEY.
-- Não compartilhe o arquivo .env, bancos locais ou diretórios de workspace.
-- Conceda apenas ferramentas MCP necessárias e revise cada execução.
-- Servidores MCP STDIO são programas locais; a escolha do comando é uma decisão de confiança.
-- A aprovação não ignora os limites de workspace, domínio ou ferramentas.
+- Credenciais NVIDIA, OAuth e Binance são criptografadas com Fernet.
+- Mantenha .env, data/.master_key, banco SQLite e workspaces privados.
+- Dê aos agentes apenas as ferramentas MCP necessárias e revise cada execução.
+- A aprovação não ignora os limites de workspace, domínio e ferramentas.
+- O Electron usa contextIsolation, nodeIntegration: false e um preload restrito.
 
 ## Desenvolvimento e validação
 
@@ -183,12 +189,14 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 pytest -q
 node --check bin/kamy-bot.js
+node --check desktop/main.js
+node --check desktop/preload.js
 node --check static/app.js
 node --check static/settings.js
 node --check static/extensions.js
 ~~~
 
-No Windows, ative o ambiente com .venv\Scripts\Activate.ps1.
+No Windows PowerShell, ative o ambiente com .venv\Scripts\Activate.ps1.
 
 ## Licença
 
