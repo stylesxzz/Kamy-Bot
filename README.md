@@ -17,22 +17,22 @@ Cada instalação mantém seus próprios dados SQLite, workspaces, chaves de API
 
 ## Identidade visual
 
-A identidade segue a paleta Malachite:
+A identidade segue a paleta Malachite em uma interface clara: branco/off-white nas superfícies e no fundo, verde nas ações, ícones, bordas de destaque e estados:
 
 | Cor | HEX | Uso |
 |---|---|---|
-| Ivory | **#FBFFF2** | Texto principal e superfícies claras |
+| Ivory | **#FFFFFF** | Fundo e superfícies principais |
 | Frosted Mint | **#E9FFCA** | Texto de destaque e superfícies suaves |
 | Malachite | **#25E970** | Ações, foco e realces |
 | Forest Green | **#238926** | Bordas, estados e superfícies |
-| Evergreen | **#022509** | Fundo e identidade escura |
+| Evergreen | **#143D23** | Tipografia e detalhes escuros |
 
 O mascote foi redesenhado como uma estrela de quatro pontas, inspirado no símbolo da referência visual. Os vetores oficiais ficam em assets/kamy-mascot.svg e assets/kamy-mark.svg.
 
 ## Recursos
 
 - **Coworkers:** NOVA, PIXEL, SCOUT e coworkers personalizados, cada um com conversa e workspace local separado.
-- **NVIDIA NIM:** chat compatível com Chat Completions, chave padrão criptografada ou chave individual por coworker e modelo configurável.
+- **NVIDIA NIM:** chat compatível com Chat Completions, chave padrão criptografada ou chave individual por coworker e modelo configurável. A tela confirma a gravação consultando o valor persistido e nunca mostra a chave de volta.
 - **Settings:** tamanho do texto, alto contraste, espaçamento, redução de movimento, provedor NVIDIA, modelo, chaves individuais e diagnóstico do runtime.
 - **Audit trail:** registro de propostas, aprovações, rejeições, execuções e bloqueios.
 - **Permissions:** ferramentas e domínios permitidos por coworker; a política é revalidada antes de executar a ação.
@@ -78,7 +78,7 @@ Na primeira execução, o comando prepara automaticamente:
 5. O banco SQLite e a pasta data/.
 6. O servidor local e a abertura do navegador em http://127.0.0.1:8765.
 
-Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir `.env`, o `.venv` válido ou os dados do usuário. Se o `.venv` estiver incompleto/inválido, somente essa pasta será recriada. Para preparar o ambiente sem abrir o app, use `npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only`. A versão 1.2.4 atualiza Pydantic para 2.13.5, cujo pydantic-core 2.46.5 oferece wheels binárias para CPython 3.14. O launcher verifica que o interpretador está realmente dentro de `.venv`, repara um ambiente virtual incompleto, instala as dependências com esse interpretador, valida os imports e só inicia o servidor depois dessas verificações.
+Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir `.env`, o `.venv` válido ou os dados do usuário. Se o `.venv` estiver incompleto/inválido, somente essa pasta será recriada. Para preparar o ambiente sem abrir o app, use `npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only`. A versão 1.2.5 atualiza Pydantic para 2.13.5, cujo pydantic-core 2.46.5 oferece wheels binárias para CPython 3.14. O launcher verifica que o interpretador está realmente dentro de `.venv`, repara um ambiente virtual incompleto, instala as dependências com esse interpretador, valida os imports e só inicia o servidor depois dessas verificações.
 
 > **Importante:** `--package=Kamy-Bot` sem `./` é interpretado como nome de pacote do registro npm e falha porque nomes publicados não aceitam letras maiúsculas. `--package=./Kamy-Bot` aponta para a pasta local do clone e usa o `package.json` dali.
 
