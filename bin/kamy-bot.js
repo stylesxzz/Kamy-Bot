@@ -6,6 +6,24 @@ const VERSION="1.3.0",PACKAGE_ROOT=path.resolve(__dirname,"..");
 const INSTALL_ROOT=path.resolve(process.env.KAMY_HOME||path.join(os.homedir(),".kamy-bot")),APP_DIR=path.join(INSTALL_ROOT,"app");
 const RUNTIME_FILES=["app.py","extensions.py","security.py","requirements.txt","requirements-browser.txt",".env.example","Dockerfile","docker-compose.yml","static","assets"];
 function help(){console.log("Kamy Bot "+VERSION+" — floating local AI companion\n\nUsage:\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot              Install/update and open the floating desktop island\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --web         Open the local interface in a browser\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --docker     Start with Docker and isolated Chromium\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --no-open    Start without opening a window\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --port 9000  Use a different localhost port\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only  Prepare .venv and install dependencies\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --help       Show this help\n\nThe default desktop mode uses Electron when available. Without Electron (including Termux), the launcher opens the local browser.\nRequirements: Node.js 18+ and Python 3.11+. Docker is required only for --docker.\nLocal files: "+INSTALL_ROOT+"\n")}
+function run(command,args,options){const result=spawnSync(command,args,Object.assign({stdio:"inherit"},options||{}));if(result.error)throw result.error;if(result.status!==0)throw new Error("Command failed (exit "+result.status+"): "+command+" "+args.join(" "))}
+function commandWorks(command,args){const result=spawnSync(command,args||["--version"],{stdio:"ignore"});return !result.error&&result.status===0}
+function findPython(){
+ const candidates=process.platform==="win32"?[{command:"py",prefix:["-3"]},{command:"python",prefix:[]}]:[{command:"python3",prefix:[]},{command:"python",prefix:[]}];
+ for(const candidate of candidates){const check=spawnSync(candidate.command,[...candidate.prefix,"-c","import sys; print('%d.%d' % sys.version_info[:2])"],{encoding:"utf8"});if(check.error||check.status!==0)continue;const parts=(check.stdout||"").trim().split(".").map(Number);if(parts[0]>3||(parts[0]===3&&parts[1]>=11))return candidate}
+ throw new Error("Python 3.11+ não foi encontrado. Instale Python e tente novamente.");
+}
+function copyRuntime(){fs.mkdirSync(APP_DIR,{recursive:true});for(const item of RUNTIME_FILES){const source=path.join(PACKAGE_ROOT,item),destination=path.join(APP_DIR,item);if(!fs.existsSync(source))throw new Error("Arquivo do pacote ausente: "+item);fs.cpSync(source,destination,{recursive:true,force:true})}fs.writeFileSync(path.join(APP_DIR,".kamy-version"),VERSION+"\n","utf8")}
+function setEnvValue(content,name,value){const expression=new RegExp("^"+name+"=.*$","m"),line=name+"="+value;return expression.test(content)?content.replace(expression,line):content.replace(/\s*$/,"\n")+line+"\n"}
+function prepareEnv(){
+ const envPath=path.join(APP_DIR,".env"),samplePath=path.join(APP_DIR,".env.example");
+ let content=fs.existsSync(envPath)?fs.readFileSync(envPath,"utf8"):fs.readFileSync(samplePath,"utf8");
+ if(!/^KAMY_MASTER_KEY=.+$/m.test(content)){const key=crypto.randomBytes(32).toString("base64").replace(/\+/g,"-").replace(/\//g,"_");content=setEnvValue(content,"KAMY_MASTER_KEY",key);console.log("Chave mestra Fernet criada. Faça backup seguro do arquivo .env.")}
+ if(!/^KAMY_PORT=.+$/m.test(content))content=setEnvValue(content,"KAMY_PORT","8765");
+ if(!/^KAMY_BIND=.+$/m.test(content))content=setEnvValue(content,"KAMY_BIND","127.0.0.1");
+ if(!/^KAMY_BROWSER_ENABLED=.+$/m.test(content))content=setEnvValue(content,"KAMY_BROWSER_ENABLED","0");
+ fs.writeFileSync(envPath,content.endsWith("\n")?content:content+"\n",{mode:0o600});try{fs.chmodSync(envPath,0o600)}catch{}return content;
+}
 function parseEnv(content){const values={};for(const line of content.split(/\r?\n/)){const match=line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);if(!match||match[1].startsWith("#"))continue;let value=match[2];if((value.startsWith('"')&&value.endsWith('"'))||(value.startsWith("'")&&value.endsWith("'")))value=value.slice(1,-1);values[match[1]]=value}return values}
 function loadLocalEnv(content){for(const [key,value] of Object.entries(parseEnv(content)))if(process.env[key]===undefined||String(process.env[key]).trim()==="")process.env[key]=value;process.env.KAMY_DATA_DIR=path.join(APP_DIR,"data")}
 function installVenv(python){
