@@ -1,0 +1,43 @@
+{
+  "name": "kamy-bot",
+  "version": "1.2.0",
+  "description": "Kamy Bot — private, local-first AI coworker studio",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "kamy-bot": "bin/kamy-bot.js"
+  },
+  "files": [
+    "bin/kamy-bot.js",
+    "app.py",
+    "extensions.py",
+    "security.py",
+    "requirements.txt",
+    "requirements-browser.txt",
+    ".env.example",
+    "Dockerfile",
+    "docker-compose.yml",
+    "static/",
+    "assets/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "ai",
+    "local-first",
+    "assistant",
+    "mcp",
+    "nvidia",
+    "coworkers"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stylesxzz/Kamy-Bot.git"
+  },
+  "homepage": "https://github.com/stylesxzz/Kamy-Bot#readme",
+  "bugs": {
+    "url": "https://github.com/stylesxzz/Kamy-Bot/issues"
+  }
+}
