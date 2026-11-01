@@ -1,11 +1,31 @@
 import os
 import stat
 from pathlib import Path
+import sys
 
+import pytest
 from cryptography.fernet import Fernet
+from fastapi.testclient import TestClient
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+
+@pytest.fixture()
+def desktop_client(tmp_path, monkeypatch):
+    monkeypatch.setenv("KAMY_TESTING", "1")
+    monkeypatch.setenv("KAMY_BROWSER_ENABLED", "0")
+    monkeypatch.setenv("KAMY_MASTER_KEY", "")
+    import app as kamy
+    monkeypatch.setattr(kamy, "DB", tmp_path / "kamy.sqlite3")
+    monkeypatch.setattr(kamy, "DATA", tmp_path)
+    monkeypatch.setattr(kamy, "WORK", tmp_path / "workspaces")
+    kamy.WORK.mkdir(parents=True, exist_ok=True)
+    kamy.init()
+    with TestClient(kamy.app, client=("127.0.0.1", 50001)) as http:
+        yield http, kamy
 
 
 def test_master_key_is_created_once_and_remains_stable(tmp_path, monkeypatch):
@@ -31,8 +51,8 @@ def test_master_key_is_created_once_and_remains_stable(tmp_path, monkeypatch):
         assert stat.S_IMODE(key_file.stat().st_mode) == 0o600
 
 
-def test_settings_api_saves_key_when_environment_has_no_master_key(client, tmp_path, monkeypatch):
-    http, kamy = client
+def test_settings_api_saves_key_when_environment_has_no_master_key(desktop_client, tmp_path, monkeypatch):
+    http, kamy = desktop_client
     import security
 
     monkeypatch.setenv("KAMY_MASTER_KEY", "")
