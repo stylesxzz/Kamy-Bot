@@ -138,6 +138,8 @@ def test_local_settings_are_persisted_and_provider_key_is_encrypted(client, monk
         models = {row["model"] for row in db.execute("SELECT model FROM agents")}
     assert encrypted.startswith("fernet:")
     assert secret not in encrypted
+    assert kamy.reveal_secret(encrypted) == secret
+    assert response.json()["key_saved"] is True
     assert models == {"nvidia/meta/llama-3.3-70b-instruct"}
     agents = http.get("/api/agents").json()
     assert all(agent["configured"] and agent["uses_default_provider"] for agent in agents)
@@ -213,3 +215,18 @@ def test_launcher_validates_and_uses_venv_before_starting():
     assert "VIRTUAL_ENV" in launcher
     assert "--setup-only" in launcher
     assert "import fastapi,uvicorn,httpx,pydantic,cryptography,jsonschema,mcp" in launcher
+
+
+
+def test_empty_environment_master_key_does_not_override_dotenv_key():
+    launcher = Path("bin/kamy-bot.js").read_text(encoding="utf-8")
+    assert 'process.env[key]===undefined||String(process.env[key]).trim()===""' in launcher
+
+
+def test_brand_theme_uses_light_surfaces_with_green_accents():
+    brand = Path("static/brand.css").read_text(encoding="utf-8")
+    light = brand.split("KAMY LIGHT THEME")[1]
+    assert "--bg:#f6faf6" in light
+    assert "--panel:#ffffff" in light
+    assert "color-scheme:light" in light
+    assert ".settings-card{background:#ffffff" in light
