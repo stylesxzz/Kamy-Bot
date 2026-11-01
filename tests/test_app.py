@@ -127,7 +127,7 @@ def test_local_settings_are_persisted_and_provider_key_is_encrypted(client, monk
         "default_api_key": secret,
         "apply_default_model": True,
     })
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     assert response.json()["default_api_key_configured"] is True
     saved = http.get("/api/settings").json()
     assert saved["default_model"] == "nvidia/meta/llama-3.3-70b-instruct"
