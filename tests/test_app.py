@@ -114,3 +114,83 @@ def test_docker_bridge_is_allowed_only_in_local_compose_mode(client, monkeypatch
     monkeypatch.setenv("KAMY_DOCKER_LOCAL", "1")
     with TestClient(kamy.app, client=("172.18.0.1", 12345)) as docker_bridge:
         assert docker_bridge.get("/api/health").status_code == 200
+
+
+def test_local_settings_are_persisted_and_provider_key_is_encrypted(client, monkeypatch):
+    http, kamy = client
+    from cryptography.fernet import Fernet
+
+    monkeypatch.setenv("KAMY_MASTER_KEY", Fernet.generate_key().decode())
+    secret = "nvapi-private-global-key"
+    response = http.put("/api/settings", json={
+        "default_model": "nvidia/meta/llama-3.3-70b-instruct",
+        "default_api_key": secret,
+        "apply_default_model": True,
+    })
+    assert response.status_code == 200
+    assert response.json()["default_api_key_configured"] is True
+    saved = http.get("/api/settings").json()
+    assert saved["default_model"] == "nvidia/meta/llama-3.3-70b-instruct"
+    assert saved["default_api_key_configured"] is True
+    assert secret not in response.text
+    with kamy.conn() as db:
+        encrypted = db.execute("SELECT value FROM app_settings WHERE key='default_api_key'").fetchone()["value"]
+        models = {row["model"] for row in db.execute("SELECT model FROM agents")}
+    assert encrypted.startswith("fernet:")
+    assert secret not in encrypted
+    assert models == {"nvidia/meta/llama-3.3-70b-instruct"}
+    agents = http.get("/api/agents").json()
+    assert all(agent["configured"] and agent["uses_default_provider"] for agent in agents)
+
+
+def test_individual_coworker_provider_can_be_updated_and_cleared(client, monkeypatch):
+    http, kamy = client
+    from cryptography.fernet import Fernet
+
+    monkeypatch.setenv("KAMY_MASTER_KEY", Fernet.generate_key().decode())
+    secret = "nvapi-private-agent-key"
+    response = http.put("/api/agents/nova/provider", json={
+        "model": "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+        "api_key": secret,
+    })
+    assert response.status_code == 200
+    assert response.json()["configured"] is True
+    with kamy.conn() as db:
+        row = db.execute("SELECT model,api_key FROM agents WHERE id='nova'").fetchone()
+    assert row["model"] == "nvidia/llama-3.1-nemotron-ultra-253b-v1"
+    assert row["api_key"].startswith("fernet:")
+    assert secret not in row["api_key"]
+
+    cleared = http.put("/api/agents/nova/provider", json={
+        "model": "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+        "clear_api_key": True,
+    })
+    assert cleared.status_code == 200
+    with kamy.conn() as db:
+        assert db.execute("SELECT api_key FROM agents WHERE id='nova'").fetchone()["api_key"] is None
+
+
+def test_npm_launcher_metadata_and_help():
+    import json
+    import shutil
+    import subprocess
+
+    package = json.loads(Path("package.json").read_text(encoding="utf-8"))
+    assert package["name"] == "kamy-bot"
+    assert package["bin"]["kamy-bot"] == "bin/kamy-bot.js"
+    if shutil.which("node"):
+        result = subprocess.run(["node", "bin/kamy-bot.js", "--help"], check=True, capture_output=True, text=True)
+        assert "npx kamy-bot" in result.stdout
+
+
+
+def test_settings_view_is_a_sibling_of_extensions_view():
+    html = Path("static/index.html").read_text(encoding="utf-8")
+    extensions_start = html.index('<section id="extensions"')
+    settings_start = html.index('<section id="settings"')
+    main_end = html.index("</main>", settings_start)
+
+    # Each navigation view must be a sibling under <main>, not nested in another
+    # .view section (a hidden parent would make the child view impossible to show).
+    assert html[extensions_start:settings_start].rstrip().endswith("</section>")
+    assert html[settings_start:main_end].count("<section") == html[settings_start:main_end].count("</section>")
