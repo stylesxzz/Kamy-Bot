@@ -211,4 +211,5 @@ def test_launcher_validates_and_uses_venv_before_starting():
     assert "Installing requirements.txt" not in launcher
     assert "Instalando requirements.txt usando o Python do .venv" in launcher
     assert "VIRTUAL_ENV" in launcher
+    assert "--setup-only" in launcher
     assert "import fastapi,uvicorn,httpx,pydantic,cryptography,jsonschema,mcp" in launcher
