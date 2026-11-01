@@ -2,10 +2,10 @@
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),os=require("node:os"),crypto=require("node:crypto"),http=require("node:http");
 const {spawn,spawnSync}=require("node:child_process");
-const VERSION="1.2.2",PACKAGE_ROOT=path.resolve(__dirname,"..");
+const VERSION="1.2.3",PACKAGE_ROOT=path.resolve(__dirname,"..");
 const INSTALL_ROOT=path.resolve(process.env.KAMY_HOME||path.join(os.homedir(),".kamy-bot")),APP_DIR=path.join(INSTALL_ROOT,"app");
 const RUNTIME_FILES=["app.py","extensions.py","security.py","requirements.txt","requirements-browser.txt",".env.example","Dockerfile","docker-compose.yml","static","assets"];
-function help(){console.log("Kamy Bot "+VERSION+" — local AI companion\n\nUsage:\n  npm exec --yes --package=kamy-bot -- kamy-bot              Install/update and start the native local app\n  npm exec --yes --package=kamy-bot -- kamy-bot --docker     Start with Docker and isolated Chromium browser\n  npm exec --yes --package=kamy-bot -- kamy-bot --no-open    Do not open the browser automatically\n  npm exec --yes --package=kamy-bot -- kamy-bot --port 9000  Use a different localhost port\n  npm exec --yes --package=kamy-bot -- kamy-bot --help       Show this help\n\nRequirements: Node.js 18+ and Python 3.11+. The launcher creates/validates .venv and installs requirements.txt before starting the server.\nDocker Engine/Desktop is required only for --docker.\nLocal files: "+INSTALL_ROOT+"\n")}
+function help(){console.log("Kamy Bot "+VERSION+" — local AI companion\n\nUsage:\n  npm exec --yes --package=kamy-bot -- kamy-bot              Install/update and start the native local app\n  npm exec --yes --package=kamy-bot -- kamy-bot --docker     Start with Docker and isolated Chromium browser\n  npm exec --yes --package=kamy-bot -- kamy-bot --no-open    Do not open the browser automatically\n  npm exec --yes --package=kamy-bot -- kamy-bot --port 9000  Use a different localhost port\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only  Prepare .venv and install dependencies, then exit\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --help       Show this help\n\nRequirements: Node.js 18+ and Python 3.11+. The launcher creates/validates .venv and installs requirements.txt before starting the server.\nDocker Engine/Desktop is required only for --docker.\nLocal files: "+INSTALL_ROOT+"\n")}
 function run(command,args,options){const result=spawnSync(command,args,Object.assign({stdio:"inherit"},options||{}));if(result.error)throw result.error;if(result.status!==0)throw new Error("Command failed (exit "+result.status+"): "+command+" "+args.join(" "))}
 function commandWorks(command,args){const result=spawnSync(command,args||["--version"],{stdio:"ignore"});return !result.error&&result.status===0}
 function findPython(){
@@ -74,12 +74,14 @@ async function dockerStart(port){
 }
 async function main(){
  const args=process.argv.slice(2);if(args.includes("--help")||args.includes("-h"))return help();
+ const setupOnly=args.includes("--setup-only");
  const dockerMode=args.includes("--docker"),noOpen=args.includes("--no-open"),portIndex=args.indexOf("--port");
  copyRuntime();const envContent=prepareEnv(),values=parseEnv(envContent),port=portIndex>=0?Number(args[portIndex+1]):Number(values.KAMY_PORT||8765);
  if(!Number.isInteger(port)||port<1024||port>65535)throw new Error("Porta inválida. Use um valor entre 1024 e 65535.");
  const url="http://127.0.0.1:"+port;
  if(dockerMode){await dockerStart(port);if(!noOpen)openBrowser(url);console.log("Kamy Bot está em execução com Docker: "+url);console.log("Parar: docker compose -f "+path.join(APP_DIR,"docker-compose.yml")+" down");return}
  const python=findPython();loadLocalEnv(envContent);process.env.KAMY_PORT=String(port);const pythonExe=installVenv(python);fs.mkdirSync(path.join(APP_DIR,"data"),{recursive:true});
+ if(setupOnly){console.log("Preparação concluída. .venv e requirements.txt estão prontos em "+APP_DIR);return}
  if(await healthCheck(port)){console.log("Kamy Bot já está respondendo em "+url);if(!noOpen)openBrowser(url);return}
  const bind=process.env.KAMY_BIND||"127.0.0.1";
  const child=spawn(pythonExe,["-m","uvicorn","app:app","--host",bind,"--port",String(port)],{cwd:APP_DIR,env:process.env,stdio:"inherit"});
