@@ -38,7 +38,7 @@ function agentCards(agents){
  $("#agentProviderCards").innerHTML=agents.map(a=>'<form class="agent-provider-card" data-agent-provider="'+esc(a.id)+'"><h3>'+esc(a.name)+'</h3><p>'+esc(a.role)+' · '+(a.configured?(a.uses_default_provider?"Using default key":"Private key configured"):"Demo mode")+'</p><label class="settings-field">Model<input name="model" value="'+esc(a.model)+'" required maxlength="160"></label><label class="settings-field">Private NVIDIA API key<input name="api_key" type="password" autocomplete="new-password" placeholder="Leave blank to keep current"></label><label class="settings-toggle"><input name="clear_api_key" type="checkbox"><span><b>Remove this coworker key</b><small>Use the global key instead, when configured.</small></span></label><button class="secondary-btn">Save coworker</button></form>').join("")||"<p>No coworkers configured.</p>";
  document.querySelectorAll("[data-agent-provider]").forEach(form=>form.addEventListener("submit",async event=>{
   event.preventDefault();const data=new FormData(form),body={model:String(data.get("model")||"").trim(),api_key:String(data.get("api_key")||"").trim()||null,clear_api_key:data.get("clear_api_key")==="on"};
-  try{await request("/agents/"+encodeURIComponent(form.dataset.agentProvider)+"/provider",{method:"PUT",body:JSON.stringify(body)});toast("Configuração do coworker salva.");await render()}catch(error){toast(error.message)}
+  try{const result=await request("/agents/"+encodeURIComponent(form.dataset.agentProvider)+"/provider",{method:"PUT",body:JSON.stringify(body)});if(body.api_key&&!result.configured)throw new Error("A chave do coworker não foi confirmada pelo servidor.");toast(body.api_key?"Chave do coworker salva e criptografada.":"Configuração do coworker salva.");await render()}catch(error){toast(error.message)}
  }));
 }
 async function render(){
@@ -46,7 +46,7 @@ async function render(){
  try{
   const [settings,agents]=await Promise.all([request("/settings"),request("/agents")]);
   $("#defaultModel").value=settings.default_model;
-  $("#providerState").textContent=settings.default_api_key_configured?"Chave padrão configurada e protegida":"Sem chave padrão";
+  $("#providerState").textContent=settings.default_api_key_configured?"Chave padrão salva · criptografada":"Nenhuma chave padrão salva";
   $("#runtimeInfo").innerHTML=runtimeRows(settings);
   agentCards(agents);$("#clearDefaultKey").checked=false;$("#defaultApiKey").value="";
  }catch(error){$("#providerState").textContent="Falha ao ler configurações";$("#runtimeInfo").textContent=error.message;toast(error.message)}
@@ -55,9 +55,11 @@ $("#defaultProviderForm").addEventListener("submit",async event=>{
  event.preventDefault();
  const body={default_model:$("#defaultModel").value.trim(),default_api_key:$("#defaultApiKey").value.trim()||null,clear_default_api_key:$("#clearDefaultKey").checked,apply_default_model:$("#applyModelAll").checked};
  try{
+  const keyWasProvided=Boolean(body.default_api_key);
   const result=await request("/settings",{method:"PUT",body:JSON.stringify(body)});
+  if(keyWasProvided&&!result.default_api_key_configured)throw new Error("O servidor não confirmou a gravação da chave NVIDIA.");
   $("#defaultApiKey").value="";$("#clearDefaultKey").checked=false;$("#applyModelAll").checked=false;
-  toast(result.applied_to_all_agents?"Modelo e chave padrão atualizados.":"Provedor padrão salvo com segurança.");await render();
+  toast(keyWasProvided?"Chave NVIDIA salva e criptografada.":(body.clear_default_api_key?"Chave NVIDIA removida.":"Configurações do provedor salvas."));await render();
  }catch(error){toast(error.message)}
 });
 document.addEventListener("click",event=>{const button=event.target.closest("[data-open-view]");if(button)document.querySelector('[data-view="'+button.dataset.openView+'"]')?.click()});
