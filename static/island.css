@@ -1,0 +1,239 @@
+/* Native desktop floating-island presentation. */
+body.desktop-app {
+  background: transparent !important;
+  overflow: hidden;
+  min-width: 0;
+}
+body.desktop-app .shell {
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #dce8dd;
+  border-radius: 22px;
+  background: #f6faf6;
+  box-shadow: 0 16px 48px #102d1a30;
+}
+body.desktop-app main {
+  min-width: 0;
+  min-height: 0;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.desktop-bar {
+  display: none;
+  flex: 0 0 58px;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e9e1;
+  background: #f9fcf9;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+body.desktop-app .desktop-bar { display: flex; }
+.desktop-brand {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  min-width: 96px;
+  color: #173321;
+}
+.desktop-brand img { width: 28px; height: 28px; object-fit: contain; }
+.desktop-brand b {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  line-height: 1.1;
+}
+.desktop-brand small {
+  display: block;
+  margin-top: 3px;
+  color: #718274;
+  font: 7px "DM Mono", monospace;
+  letter-spacing: .6px;
+}
+#desktopAgentSelect {
+  flex: 1 1 auto;
+  min-width: 70px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #d1dfd2;
+  border-radius: 10px;
+  outline: 0;
+  background: #fff;
+  color: #193321;
+  font: 600 11px Manrope, Arial, sans-serif;
+  -webkit-app-region: no-drag;
+}
+.desktop-control {
+  flex: 0 0 auto;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #d4e3d5;
+  border-radius: 10px;
+  background: #edf6ee;
+  color: #1e6937;
+  font: 700 11px Manrope, Arial, sans-serif;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+#desktopExpand { background: #258b45; color: #fff; border-color: #258b45; }
+#desktopCollapse { display: none; }
+body.desktop-app.expanded-mode #desktopExpand { display: none; }
+body.desktop-app.expanded-mode #desktopCollapse { display: block; }
+#desktopQuit { min-width: 30px; padding: 0; color: #5e7061; }
+
+body.desktop-app.island-mode .shell { display: block; }
+body.desktop-app.island-mode .sidebar,
+body.desktop-app.island-mode main > header { display: none !important; }
+body.desktop-app.island-mode #home.view {
+  display: block !important;
+  width: 100%;
+  max-width: none;
+  height: calc(100dvh - 59px);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+body.desktop-app.island-mode #home .hero,
+body.desktop-app.island-mode #home .section-head,
+body.desktop-app.island-mode #home .cards,
+body.desktop-app.island-mode #home .right { display: none !important; }
+body.desktop-app.island-mode #home .workspace {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+body.desktop-app.island-mode #home .chat {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  border: 0;
+  border-radius: 0 0 21px 21px;
+  box-shadow: none;
+  background: #fff;
+  overflow: hidden;
+}
+body.desktop-app.island-mode #home .chat > .panel-title { display: none; }
+body.desktop-app.island-mode #messages {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  padding: 14px 13px;
+  background: #fff;
+}
+body.desktop-app.island-mode .msg {
+  max-width: 94%;
+  padding: 10px 12px;
+  font-size: 12px;
+  border-radius: 13px;
+}
+body.desktop-app.island-mode .msg.user {
+  background: #e8f4ea;
+  border: 1px solid #d1e6d5;
+  color: #17452a;
+}
+body.desktop-app.island-mode .msg.assistant {
+  background: #f7faf7;
+  border: 1px solid #e3ece4;
+  color: #223a29;
+}
+body.desktop-app.island-mode .msg small { color: #32804a; }
+body.desktop-app.island-mode #pending {
+  flex: 0 0 auto;
+  max-height: 23%;
+  overflow-y: auto;
+}
+body.desktop-app.island-mode #chatForm {
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 49px;
+  margin: 8px 10px 0;
+  padding: 5px;
+  border: 1px solid #cbdccc;
+  border-radius: 14px;
+  background: #fff;
+}
+body.desktop-app.island-mode #chatInput {
+  min-width: 0;
+  padding: 9px 8px;
+  color: #1a3522;
+  font: 12px Manrope, Arial, sans-serif;
+}
+body.desktop-app.island-mode #chatInput::placeholder { color: #849286; }
+#voiceButton {
+  flex: 0 0 37px;
+  width: 37px;
+  height: 37px;
+  border: 0;
+  border-radius: 11px;
+  background: #edf6ee;
+  color: #1e6937;
+  font-size: 17px;
+  cursor: pointer;
+}
+#voiceButton:disabled { opacity: .45; cursor: not-allowed; }
+#voiceButton.recording {
+  background: #ffe9e7;
+  color: #bb3d31;
+  box-shadow: 0 0 0 4px #ffe9e788;
+  animation: kamy-pulse 1.2s ease-in-out infinite;
+}
+body.desktop-app.island-mode #chatForm > button[type="submit"] {
+  flex: 0 0 39px;
+  width: 39px;
+  height: 37px;
+  border-radius: 11px;
+  background: #258b45;
+  color: #fff;
+}
+body.desktop-app.island-mode .hint {
+  flex: 0 0 auto;
+  padding: 8px 6px 9px;
+  color: #78877a;
+  font-size: 8px;
+}
+body.desktop-app.island-mode #toast {
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 100;
+  text-align: center;
+}
+
+body.desktop-app.expanded-mode .shell {
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+body.desktop-app.expanded-mode .desktop-bar {
+  border-radius: 0;
+}
+body.desktop-app.expanded-mode main > header { flex: 0 0 62px; }
+body.desktop-app.expanded-mode .view { overflow: auto; min-height: 0; }
+body.desktop-app.expanded-mode #home.view { flex: 1 1 auto; }
+body.desktop-app.expanded-mode .workspace { min-width: 0; }
+
+@keyframes kamy-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(.94); }
+}
+@media (max-width: 520px) {
+  .desktop-brand { min-width: 30px; }
+  .desktop-brand span { display: none; }
+  .desktop-bar { gap: 7px; padding-inline: 9px; }
+  #desktopAgentSelect { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #voiceButton.recording { animation: none; }
+}
