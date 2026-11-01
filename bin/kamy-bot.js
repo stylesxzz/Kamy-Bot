@@ -22,7 +22,7 @@ function prepareEnv(){
  if(!/^KAMY_PORT=.+$/m.test(content))content=setEnvValue(content,"KAMY_PORT","8765");
  if(!/^KAMY_BIND=.+$/m.test(content))content=setEnvValue(content,"KAMY_BIND","127.0.0.1");
  if(!/^KAMY_BROWSER_ENABLED=.+$/m.test(content))content=setEnvValue(content,"KAMY_BROWSER_ENABLED","0");
- fs.writeFileSync(envPath,content.endsWith("\n")?content:content+"\n",{mode:0o600});return content;
+ fs.writeFileSync(envPath,content.endsWith("\n")?content:content+"\n",{mode:0o600});try{fs.chmodSync(envPath,0o600)}catch{}return content;
 }
 function parseEnv(content){const values={};for(const line of content.split(/\r?\n/)){const match=line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);if(!match||match[1].startsWith("#"))continue;let value=match[2];if((value.startsWith('"')&&value.endsWith('"'))||(value.startsWith("'")&&value.endsWith("'")))value=value.slice(1,-1);values[match[1]]=value}return values}
 function loadLocalEnv(content){for(const [key,value] of Object.entries(parseEnv(content)))if(process.env[key]===undefined)process.env[key]=value;process.env.KAMY_DATA_DIR=path.join(APP_DIR,"data")}
@@ -51,7 +51,7 @@ async function main(){
  if(!Number.isInteger(port)||port<1024||port>65535)throw new Error("Porta inválida. Use um valor entre 1024 e 65535.");
  const url="http://127.0.0.1:"+port;
  if(dockerMode){await dockerStart(port);if(!noOpen)openBrowser(url);console.log("Kamy Bot está em execução com Docker: "+url);console.log("Parar: docker compose -f "+path.join(APP_DIR,"docker-compose.yml")+" down");return}
- const python=findPython();loadLocalEnv(envContent);const pythonExe=installVenv(python);fs.mkdirSync(path.join(APP_DIR,"data"),{recursive:true});
+ const python=findPython();loadLocalEnv(envContent);process.env.KAMY_PORT=String(port);const pythonExe=installVenv(python);fs.mkdirSync(path.join(APP_DIR,"data"),{recursive:true});
  if(await healthCheck(port)){console.log("Kamy Bot já está respondendo em "+url);if(!noOpen)openBrowser(url);return}
  const bind=process.env.KAMY_BIND||"127.0.0.1";
  const child=spawn(pythonExe,["-m","uvicorn","app:app","--host",bind,"--port",String(port)],{cwd:APP_DIR,env:process.env,stdio:"inherit"});
