@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.14"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,7 +27,7 @@ jobs:
       - name: Install core dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest
+          pip install --only-binary=pydantic-core -r requirements.txt pytest
       - name: Python syntax check
         run: python -m compileall -q app.py extensions.py security.py tests
       - name: Run tests
