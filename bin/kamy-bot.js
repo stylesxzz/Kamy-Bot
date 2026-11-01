@@ -2,7 +2,7 @@
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),os=require("node:os"),crypto=require("node:crypto"),http=require("node:http");
 const {spawn,spawnSync}=require("node:child_process");
-const VERSION="1.2.5",PACKAGE_ROOT=path.resolve(__dirname,"..");
+const VERSION="1.2.6",PACKAGE_ROOT=path.resolve(__dirname,"..");
 const INSTALL_ROOT=path.resolve(process.env.KAMY_HOME||path.join(os.homedir(),".kamy-bot")),APP_DIR=path.join(INSTALL_ROOT,"app");
 const RUNTIME_FILES=["app.py","extensions.py","security.py","requirements.txt","requirements-browser.txt",".env.example","Dockerfile","docker-compose.yml","static","assets"];
 function help(){console.log("Kamy Bot "+VERSION+" — local AI companion\n\nUsage:\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot              Install/update and start the native local app\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --docker     Start with Docker and isolated Chromium browser\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --no-open    Do not open the browser automatically\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --port 9000  Use a different localhost port\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only  Prepare .venv and install dependencies, then exit\n  npm exec --yes --package=./Kamy-Bot -- kamy-bot --help       Show this help\n\nRequirements: Node.js 18+ and Python 3.11+. The launcher creates/validates .venv and installs requirements.txt before starting the server.\nDocker Engine/Desktop is required only for --docker.\nLocal files: "+INSTALL_ROOT+"\n")}
