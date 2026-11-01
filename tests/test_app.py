@@ -230,3 +230,21 @@ def test_brand_theme_uses_light_surfaces_with_green_accents():
     assert "--panel:#ffffff" in light
     assert "color-scheme:light" in light
     assert ".settings-card{background:#ffffff" in light
+
+
+
+def test_fernet_prefix_is_removed_without_dropping_first_token_character():
+    source = Path("app.py").read_text(encoding="utf-8")
+    assert 'secret_cipher().decrypt(value[7:].encode()).decode()' in source
+    assert 'secret_cipher().decrypt(value[8:].encode()).decode()' not in source
+
+
+def test_existing_fernet_values_roundtrip(client, monkeypatch):
+    _, kamy = client
+    from cryptography.fernet import Fernet
+    key = Fernet.generate_key().decode()
+    monkeypatch.setenv("KAMY_MASTER_KEY", key)
+    original = "nvapi-already-saved-key"
+    encrypted = kamy.protect_secret(original)
+    assert encrypted.startswith("fernet:")
+    assert kamy.reveal_secret(encrypted) == original
