@@ -50,7 +50,10 @@ function installVenv(python){
   run(venvPython,["-m","pip","install","--disable-pip-version-check","--upgrade","pip"],{cwd});
   run(venvPython,["-m","pip","install","--disable-pip-version-check","--only-binary=pydantic-core","-r",requirementsPath],{cwd});
   const verify=spawnSync(venvPython,["-c","import fastapi,uvicorn,httpx,pydantic,cryptography,jsonschema,mcp; print('Python environment OK')"],{encoding:"utf8"});
-  if(verify.error||verify.status!==0)throw new Error("As dependências foram instaladas, mas a validação de imports falhou. Execute o comando novamente e confira o erro acima.");
+  if(verify.error||verify.status!==0){
+   const diagnostic=(verify.stderr||verify.stdout||"sem saída do Python").trim();
+   throw new Error("As dependências foram instaladas, mas a validação de imports falhou dentro do .venv.\n"+diagnostic);
+  }
   fs.writeFileSync(marker,digest+"\n","utf8");
   console.log("Dependências instaladas e verificadas dentro de .venv.");
  }else{
