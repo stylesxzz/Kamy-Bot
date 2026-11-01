@@ -177,3 +177,5 @@ th{color:#5c765f;border-color:#e2ebe3}td{color:#304a36;border-color:#e9f0e9}td c
 :root[data-contrast="high"] .card p,:root[data-contrast="high"] .policy-card p,:root[data-contrast="high"] .settings-card>p{color:#304d37}
 :root[data-contrast="high"] .panel,:root[data-contrast="high"] .card,:root[data-contrast="high"] .settings-card{border-width:2px}
 :root[data-density="compact"] .view{padding-top:20px}
+
+.team-label button{background:#edf6ee;color:#267640;border:1px solid #d6e5d7;border-radius:7px}
