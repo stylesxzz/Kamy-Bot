@@ -1,6 +1,6 @@
 {
   "name": "kamy-bot",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Kamy Bot — private, local-first AI coworker studio",
   "license": "MIT",
   "engines": {
