@@ -30,11 +30,16 @@ DEFAULT=[
  {"id":"pixel","name":"PIXEL","role":"Developer coworker","description":"Creates and reads project files inside its private workspace.","domains":["example.com"],"tools":["file.write","file.read"]},
  {"id":"scout","name":"SCOUT","role":"Browser coworker","description":"Visits approved pages and captures browser evidence.","domains":["example.com"],"tools":["browser.goto","browser.screenshot","file.write","file.read"]}]
 def now(): return datetime.now(timezone.utc).isoformat()
+def _master_key_is_valid():
+ key=os.getenv("KAMY_MASTER_KEY","").strip()
+ if not key:return False
+ try:Fernet(key.encode());return True
+ except Exception:return False
 def secret_cipher():
  key=os.getenv("KAMY_MASTER_KEY","").strip()
- if not key: raise HTTPException(503,"Configure KAMY_MASTER_KEY before saving API credentials.")
+ if not key: raise HTTPException(503,"A chave mestra local não foi carregada. Confira KAMY_MASTER_KEY no arquivo .env e reinicie o Kamy.")
  try: return Fernet(key.encode())
- except Exception: raise HTTPException(503,"KAMY_MASTER_KEY inválida. Gere uma chave Fernet válida.")
+ except Exception: raise HTTPException(503,"KAMY_MASTER_KEY inválida. Não substitua a chave: credenciais antigas podem depender dela. Corrija o valor original no .env.")
 def protect_secret(value):
  if not value:return None
  return "fernet:"+secret_cipher().encrypt(value.encode()).decode()
@@ -135,19 +140,24 @@ def read_settings():
   "bind_host":os.getenv("KAMY_BIND","127.0.0.1"),
   "port":os.getenv("KAMY_PORT","8765"),
   "data_dir":str(DATA.resolve()),
-  "master_key_configured":bool(os.getenv("KAMY_MASTER_KEY","").strip())
+  "master_key_configured":bool(os.getenv("KAMY_MASTER_KEY","").strip()),
+  "master_key_valid":_master_key_is_valid()
  }
 @app.put("/api/settings")
 def write_settings(b:LocalSettingsIn):
  model=b.default_model.strip()
  if not model:raise HTTPException(400,"Informe um identificador de modelo NVIDIA válido.")
- encrypted=protect_secret(b.default_api_key.strip()) if b.default_api_key and b.default_api_key.strip() else None
+ raw_key=b.default_api_key.strip() if b.default_api_key and b.default_api_key.strip() else None
+ encrypted=protect_secret(raw_key) if raw_key else None
  with conn() as c:
   c.execute("INSERT OR REPLACE INTO app_settings(key,value,updated) VALUES('default_model',?,?)",(model,now()))
   if encrypted:c.execute("INSERT OR REPLACE INTO app_settings(key,value,updated) VALUES('default_api_key',?,?)",(encrypted,now()))
   elif b.clear_default_api_key:c.execute("DELETE FROM app_settings WHERE key='default_api_key'")
   if b.apply_default_model:c.execute("UPDATE agents SET model=?",(model,))
- return {"ok":True,"default_model":model,"default_api_key_configured":bool(encrypted or (get_app_setting("default_api_key") and not b.clear_default_api_key)),"applied_to_all_agents":b.apply_default_model}
+ saved_key=get_app_setting("default_api_key")
+ if raw_key and (not saved_key or reveal_secret(saved_key)!=raw_key):
+  raise HTTPException(500,"A chave NVIDIA foi recebida, mas não pôde ser confirmada no banco local.")
+ return {"ok":True,"default_model":model,"default_api_key_configured":bool(saved_key),"key_saved":bool(raw_key and saved_key),"applied_to_all_agents":b.apply_default_model}
 def agent_json(r):
  default_key=get_app_setting("default_api_key")
  return {"id":r["id"],"name":r["name"],"role":r["role"],"description":r["description"],"model":r["model"],"configured":bool(r["api_key"] or default_key),"uses_default_provider":bool(not r["api_key"] and default_key),"domains":json.loads(r["domains"]),"tools":json.loads(r["tools"])}
