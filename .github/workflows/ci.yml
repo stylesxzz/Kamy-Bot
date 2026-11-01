@@ -40,5 +40,12 @@ jobs:
           node --check bin/kamy-bot.js
           node -e 'const p=require("./package.json"); if (p.name!=="kamy-bot" || !p.bin || !p.bin["kamy-bot"]) process.exit(1);'
           npm pack --dry-run
+      - name: Test native CLI bootstrap (.venv + requirements.txt)
+        env:
+          KAMY_HOME: ${{ runner.temp }}/kamy-cli-bootstrap
+        run: |
+          node bin/kamy-bot.js --setup-only
+          "$KAMY_HOME/app/.venv/bin/python" -c 'import sys,fastapi,uvicorn,httpx,pydantic,cryptography,jsonschema,mcp; assert sys.prefix != sys.base_prefix'
+          test -s "$KAMY_HOME/app/.venv/.kamy-requirements-sha256"
       - name: Validate Docker Compose configuration
         run: docker compose config -q
