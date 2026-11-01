@@ -202,3 +202,13 @@ def test_python_314_uses_pydantic_with_binary_core_wheel():
     launcher = Path("bin/kamy-bot.js").read_text(encoding="utf-8")
     assert "pydantic==2.14.1" in requirements
     assert "--only-binary=pydantic-core" in launcher
+
+
+
+def test_launcher_validates_and_uses_venv_before_starting():
+    launcher = Path("bin/kamy-bot.js").read_text(encoding="utf-8")
+    assert "sys.prefix != sys.base_prefix" in launcher
+    assert "Installing requirements.txt" not in launcher
+    assert "Instalando requirements.txt usando o Python do .venv" in launcher
+    assert "VIRTUAL_ENV" in launcher
+    assert "import fastapi,uvicorn,httpx,pydantic,cryptography,jsonschema,mcp" in launcher
