@@ -18,7 +18,7 @@ ROOT=Path(__file__).parent
 DATA=Path(os.getenv("KAMY_DATA_DIR","./data")); WORK=DATA/"workspaces"; DB=DATA/"kamy.sqlite3"
 DATA.mkdir(parents=True,exist_ok=True); WORK.mkdir(parents=True,exist_ok=True)
 NVIDIA_URL="https://integrate.api.nvidia.com/v1/chat/completions"
-app=FastAPI(title="Kamy Bot",version="1.2.2",docs_url=None,redoc_url=None,openapi_url=None)
+app=FastAPI(title="Kamy Bot",version="1.2.3",docs_url=None,redoc_url=None,openapi_url=None)
 from security import LocalOnlyMiddleware, SecurityHeadersMiddleware
 app.add_middleware(LocalOnlyMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
