@@ -181,3 +181,16 @@ def test_npm_launcher_metadata_and_help():
     if shutil.which("node"):
         result = subprocess.run(["node", "bin/kamy-bot.js", "--help"], check=True, capture_output=True, text=True)
         assert "npx kamy-bot" in result.stdout
+
+
+
+def test_settings_view_is_a_sibling_of_extensions_view():
+    html = Path("static/index.html").read_text(encoding="utf-8")
+    extensions_start = html.index('<section id="extensions"')
+    settings_start = html.index('<section id="settings"')
+    main_end = html.index("</main>", settings_start)
+
+    # Each navigation view must be a sibling under <main>, not nested in another
+    # .view section (a hidden parent would make the child view impossible to show).
+    assert html[extensions_start:settings_start].rstrip().endswith("</section>")
+    assert html[settings_start:main_end].count("<section") == html[settings_start:main_end].count("</section>")
