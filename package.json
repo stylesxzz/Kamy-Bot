@@ -1,7 +1,7 @@
 {
   "name": "kamy-bot",
-  "version": "1.2.6",
-  "description": "Kamy Bot — private, local-first AI coworker studio",
+  "version": "1.3.0",
+  "description": "Kamy Bot — local floating AI companion for desktop",
   "license": "MIT",
   "engines": {
     "node": ">=18"
@@ -11,6 +11,7 @@
   },
   "files": [
     "bin/kamy-bot.js",
+    "desktop/",
     "app.py",
     "extensions.py",
     "security.py",
@@ -28,9 +29,10 @@
     "ai",
     "local-first",
     "assistant",
+    "desktop",
+    "floating-island",
     "mcp",
-    "nvidia",
-    "coworkers"
+    "nvidia"
   ],
   "repository": {
     "type": "git",
@@ -39,5 +41,8 @@
   "homepage": "https://github.com/stylesxzz/Kamy-Bot#readme",
   "bugs": {
     "url": "https://github.com/stylesxzz/Kamy-Bot/issues"
+  },
+  "optionalDependencies": {
+    "electron": "45.2.1"
   }
 }
