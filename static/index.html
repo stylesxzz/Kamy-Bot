@@ -1,43 +1,196 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><title>Kamy Bot — AI Coworkers</title><link rel="stylesheet" href="/static/style.css"><link rel="stylesheet" href="/static/extensions.css"><link rel="stylesheet" href="/static/brand.css"></head><body><div class="shell"><aside class="sidebar"><a class="brand" href="#"><img src="/assets/kamy-mascot.svg" alt="Mascote Kamy"><span><b>KAMY BOT</b><small>LOCAL AI COMPANION</small></span></a><div class="side-label">WORKSPACE</div><button class="nav active" data-view="home">◈ <span>Coworkers</span></button><button class="nav" data-view="audit">◷ <span>Audit trail</span></button><button class="nav" data-view="policy">◇ <span>Permissions</span></button><button class="nav" data-view="extensions">✧ <span>Extensions</span></button><button class="nav" data-view="settings">⚙ <span>Settings</span></button><div class="side-label team-label">YOUR TEAM <button id="addAgent">＋</button></div><div id="agentList"></div><div class="side-bottom"><span class="online"></span> LOCAL INSTANCE <small>PRIVATE WORKSPACE</small></div></aside><main><header><div>Workspace <i>/</i> <b id="crumb">Coworkers</b></div><span class="gate"><i></i> APPROVAL GATE ACTIVE</span></header><section id="home" class="view"><div class="hero"><div><div class="eyebrow">✦ YOUR AI TEAM, YOUR RULES</div><h1>Your work,<br><em>in good hands.</em></h1><p>Your private AI workspace.<br>Local by design. You stay in control.</p><button class="gradient-btn" id="heroAdd">＋ Add a coworker</button></div><div class="hero-art mascot-hero"><img src="/assets/kamy-mascot.svg" alt="Mascote oficial da Kamy Bot"><span>KAMY · YOUR AI COMPANION</span></div></div><div class="section-head"><div><h2>Your coworkers</h2><p>Choose a channel to start working.</p></div><span class="count" id="count"></span></div><div id="cards" class="cards"></div><div class="workspace"><div class="chat panel"><div class="panel-title"><div class="avatar" id="agentAvatar">N</div><div><b id="agentName">NOVA</b><small id="agentRole">Research coworker</small></div><span class="live">● PRIVATE CHANNEL</span></div><div id="messages" class="messages"></div><div id="pending"></div><form id="chatForm"><input id="chatInput" placeholder="Message your coworker..." autocomplete="off"><button>↑</button></form><small class="hint">Actions are checked by policy and require your approval.</small></div><div class="right"><div class="panel browser"><div class="panel-title"><b>Browser workspace</b><span class="live">● LIVE VIEW</span></div><div class="address" id="browserUrl">about:blank</div><img id="screenshot" src="/static/empty.svg"><div class="browser-foot"><span>Isolated browser context</span><button id="refreshShot">Refresh ↻</button></div></div><div class="panel activity"><div class="panel-title"><b>Recent activity</b><button data-jump="audit">View all ↗</button></div><div id="recent"></div></div></div></div></section><section id="audit" class="view hidden"><div class="pagehead"><div class="eyebrow">TRACEABILITY / 02</div><h1>Audit <em>trail.</em></h1><p>A durable record of proposals, decisions and outcomes.</p></div><div class="panel"><div class="panel-title"><b>Action history</b><button id="reloadAudit">Refresh ↻</button></div><div class="tablewrap"><table><thead><tr><th>ACTION</th><th>COWORKER</th><th>PAYLOAD</th><th>STATUS</th><th>TIME</th></tr></thead><tbody id="auditRows"></tbody></table></div></div></section><section id="policy" class="view hidden"><div class="pagehead"><div class="eyebrow">CONTROL PLANE / 03</div><h1>Boundaries & <em>permissions.</em></h1><p>Define which tools and websites each coworker can access.</p></div><div id="policies" class="policies"></div><div class="note"><b>Default deny.</b> Policy is checked again immediately before an action executes. Approval never bypasses a boundary.</div></section>
-<section id="extensions" class="view hidden">
- <div class="pagehead"><div class="eyebrow">EXTENSION CONTROL PLANE / 04</div><h1>Extend <em>Kamy.</em></h1><p>Skills, MCP, connected accounts, finance proposals and public-source research — under one permission surface.</p></div>
- <div class="extension-tabs"><button class="ext-tab active" data-ext="skills">Skills</button><button class="ext-tab" data-ext="mcp">MCP</button><button class="ext-tab" data-ext="connect">Connect / OAuth</button><button class="ext-tab" data-ext="finance">Finance</button><button class="ext-tab" data-ext="intel">Kamy Intel</button></div>
- <div id="ext-skills" class="ext-panel"></div><div id="ext-mcp" class="ext-panel hidden"></div><div id="ext-connect" class="ext-panel hidden"></div><div id="ext-finance" class="ext-panel hidden"></div><div id="ext-intel" class="ext-panel hidden"></div>
- <div class="note ext-note"><b>Safety boundary.</b> MCP registrations are not yet live tool sessions; financial proposals never send orders. Connect only official providers and use public or authorized Intel sources.</div>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f6faf6">
+  <title>Kamy Bot — Assistente local</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/extensions.css">
+  <link rel="stylesheet" href="/static/brand.css">
+  <link rel="stylesheet" href="/static/island.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#">
+        <img src="/assets/kamy-mascot.svg" alt="Mascote Kamy">
+        <span><b>KAMY BOT</b><small>LOCAL AI COMPANION</small></span>
+      </a>
+      <div class="side-label">WORKSPACE</div>
+      <button class="nav active" data-view="home">◈ <span>Conversas</span></button>
+      <button class="nav" data-view="audit">◷ <span>Histórico</span></button>
+      <button class="nav" data-view="policy">◇ <span>Permissões</span></button>
+      <button class="nav" data-view="extensions">✧ <span>Extensões</span></button>
+      <button class="nav" data-view="settings">⚙ <span>Configurações</span></button>
+      <div class="side-label team-label">SEUS AGENTES <button id="addAgent" type="button">＋</button></div>
+      <div id="agentList"></div>
+      <div class="side-bottom"><span class="online"></span> INSTÂNCIA LOCAL <small>ESPAÇO PRIVADO</small></div>
+    </aside>
 
-</section>
-<section id="settings" class="view hidden">
- <div class="pagehead"><div class="eyebrow">LOCAL CONTROL / 05</div><h1>Settings & <em>control.</em></h1><p>Configure the app running on this machine. Nothing here creates shared or hosted user accounts.</p></div>
- <div class="settings-grid">
-  <section class="settings-card">
-   <div class="settings-kicker">01 / INTERFACE</div><h2>Readability & appearance</h2><p>Adjust the local interface without changing the fixed Malachite brand palette.</p>
-   <label class="settings-field">Text size<select id="uiScale"><option value="1">Default</option><option value="1.08">Large</option><option value="1.16">Extra large</option></select></label>
-   <label class="settings-toggle"><input type="checkbox" id="uiContrast"><span><b>High contrast</b><small>Stronger text, borders and focus outlines.</small></span></label>
-   <label class="settings-toggle"><input type="checkbox" id="uiCompact"><span><b>Compact spacing</b><small>Show more items on the screen.</small></span></label>
-   <label class="settings-toggle"><input type="checkbox" id="uiMotion"><span><b>Reduce motion</b><small>Disable non-essential interface animation.</small></span></label>
-   <div class="settings-actions"><button type="button" class="gradient-btn" id="saveUi">Save appearance</button><button type="button" class="secondary-btn" id="resetUi">Reset</button></div>
-  </section>
-  <section class="settings-card">
-   <div class="settings-kicker">02 / AI PROVIDER</div><h2>NVIDIA NIM defaults</h2><p>Save one encrypted local key for coworkers that do not have their own provider key.</p>
-   <form id="defaultProviderForm">
-    <label class="settings-field">Default model<input id="defaultModel" name="default_model" value="meta/llama-3.3-70b-instruct" required maxlength="160"></label>
-    <label class="settings-field">Default NVIDIA API key<input id="defaultApiKey" type="password" autocomplete="new-password" placeholder="nvapi-… (leave blank to keep current)"></label>
-    <label class="settings-toggle"><input type="checkbox" id="clearDefaultKey"><span><b>Remove default API key</b><small>Return coworkers without a private key to demo mode.</small></span></label>
-    <label class="settings-toggle"><input type="checkbox" id="applyModelAll"><span><b>Apply this model to every coworker</b><small>Updates all saved coworker model selections.</small></span></label>
-    <div class="settings-actions"><button class="gradient-btn">Save provider settings</button><span id="providerState" class="settings-state">Loading…</span></div>
-   </form>
-  </section>
-  <section class="settings-card settings-wide">
-   <div class="settings-kicker">03 / COWORKERS</div><h2>Individual model & API key</h2><p>Override the global model or attach a private key to a single coworker. Private keys take priority over the default key.</p>
-   <div id="agentProviderCards" class="agent-provider-grid"><p>Loading coworkers…</p></div>
-  </section>
-  <section class="settings-card">
-   <div class="settings-kicker">04 / RUNTIME</div><h2>Local runtime</h2><p>Read-only details for the process currently serving this page.</p><div id="runtimeInfo" class="runtime-list">Loading runtime…</div>
-  </section>
-  <section class="settings-card">
-   <div class="settings-kicker">05 / INTEGRATIONS</div><h2>Your tools & connections</h2><p>Configure your own MCP servers, Skills, OAuth clients and Binance connection in Extensions.</p>
-   <div class="settings-actions"><button type="button" class="gradient-btn" data-open-view="extensions">Open extensions</button><button type="button" class="secondary-btn" data-open-view="policy">Open permissions</button></div>
-   <p class="settings-footnote">OAuth is used for supported HTTP MCP connections. Binance credentials are configured separately in Finance. All settings belong to this local installation.</p>
-  </section>
- </div>
-</section></main></div><div id="modal" class="modal hidden"><form id="agentForm" class="modalbox"><button type="button" id="close" class="close">×</button><div class="eyebrow">EXPAND YOUR TEAM</div><h2>Bring your own <em>agent.</em></h2><p>Connect a NVIDIA NIM model or begin in demo mode.</p><label>Agent name<input name="name" required placeholder="e.g. ORBIT"></label><label>Role<input name="role" required placeholder="e.g. Product analyst"></label><label>Description<input name="description" placeholder="What should it help with?"></label><label>NVIDIA model<input name="model" value="meta/llama-3.3-70b-instruct"></label><label>NVIDIA API key <small>Optional — stored server-side</small><input name="api_key" type="password" placeholder="nvapi-..."></label><label>Allowed domains<input name="domains" value="example.com"></label><button class="gradient-btn">Create coworker ↗</button></form></div><div id="toast"></div><script src="/static/app.js"></script><script src="/static/extensions.js"></script><script src="/static/settings.js"></script></body></html>
+    <main>
+      <div id="desktopBar" class="desktop-bar" aria-label="Ilha flutuante do Kamy">
+        <div class="desktop-brand">
+          <img src="/assets/kamy-mark.svg" alt="">
+          <span><b>KAMY</b><small>ASSISTENTE LOCAL</small></span>
+        </div>
+        <select id="desktopAgentSelect" aria-label="Escolher agente"></select>
+        <button id="desktopExpand" class="desktop-control" type="button" title="Abrir em tela cheia">⤢</button>
+        <button id="desktopCollapse" class="desktop-control" type="button" title="Voltar à ilha">▱</button>
+        <button id="desktopQuit" class="desktop-control" type="button" title="Fechar Kamy">×</button>
+      </div>
+
+      <header>
+        <div>Workspace <i>/</i> <b id="crumb">Conversas</b></div>
+        <span class="gate"><i></i> APROVAÇÃO DE AÇÕES ATIVA</span>
+      </header>
+
+      <section id="home" class="view">
+        <div class="hero">
+          <div>
+            <div class="eyebrow">✦ SEU ASSISTENTE, SUAS REGRAS</div>
+            <h1>Seu trabalho,<br><em>em boas mãos.</em></h1>
+            <p>Seu espaço privado de IA.<br>Local por padrão. Você mantém o controle.</p>
+            <button class="gradient-btn" id="heroAdd" type="button">＋ Adicionar agente</button>
+          </div>
+          <div class="hero-art mascot-hero">
+            <img src="/assets/kamy-mascot.svg" alt="Mascote oficial do Kamy Bot">
+            <span>KAMY · SEU ASSISTENTE</span>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <div><h2>Seus agentes</h2><p>Escolha um agente para iniciar uma conversa.</p></div>
+          <span class="count" id="count"></span>
+        </div>
+        <div id="cards" class="cards"></div>
+
+        <div class="workspace">
+          <div class="chat panel">
+            <div class="panel-title">
+              <div class="avatar" id="agentAvatar">N</div>
+              <div><b id="agentName">NOVA</b><small id="agentRole">Agente de pesquisa</small></div>
+              <span class="live">● CANAL PRIVADO</span>
+            </div>
+            <div id="messages" class="messages"></div>
+            <div id="pending"></div>
+            <form id="chatForm">
+              <input id="chatInput" placeholder="Escreva ou dite uma mensagem..." autocomplete="off">
+              <button id="voiceButton" type="button" title="Ditar mensagem em português" aria-label="Ditar mensagem">🎙</button>
+              <button type="submit" title="Enviar mensagem" aria-label="Enviar mensagem">↑</button>
+            </form>
+            <small class="hint">Ações externas exigem sua aprovação antes de serem executadas.</small>
+          </div>
+
+          <div class="right">
+            <div class="panel browser">
+              <div class="panel-title"><b>Navegador isolado</b><span class="live">● VISUALIZAÇÃO</span></div>
+              <div class="address" id="browserUrl">about:blank</div>
+              <img id="screenshot" src="/static/empty.svg" alt="Prévia do navegador">
+              <div class="browser-foot"><span>Contexto de navegador isolado</span><button id="refreshShot" type="button">Atualizar ↻</button></div>
+            </div>
+            <div class="panel activity">
+              <div class="panel-title"><b>Atividade recente</b><button data-jump="audit" type="button">Ver tudo ↗</button></div>
+              <div id="recent"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="audit" class="view hidden">
+        <div class="pagehead"><div class="eyebrow">RASTREABILIDADE / 02</div><h1>Histórico <em>de ações.</em></h1><p>Registro de propostas, decisões e resultados.</p></div>
+        <div class="panel">
+          <div class="panel-title"><b>Histórico de ações</b><button id="reloadAudit" type="button">Atualizar ↻</button></div>
+          <div class="tablewrap">
+            <table><thead><tr><th>AÇÃO</th><th>AGENTE</th><th>DETALHES</th><th>STATUS</th><th>HORÁRIO</th></tr></thead><tbody id="auditRows"></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <section id="policy" class="view hidden">
+        <div class="pagehead"><div class="eyebrow">CONTROLE / 03</div><h1>Limites e <em>permissões.</em></h1><p>Defina quais ferramentas e sites cada agente pode acessar.</p></div>
+        <div id="policies" class="policies"></div>
+        <div class="note"><b>Negação por padrão.</b> A política é verificada novamente antes de executar uma ação. A aprovação não ignora os limites configurados.</div>
+      </section>
+
+      <section id="extensions" class="view hidden">
+        <div class="pagehead"><div class="eyebrow">EXTENSÕES / 04</div><h1>Amplie o <em>Kamy.</em></h1><p>Skills, MCP, conexões, propostas financeiras e pesquisa — sob seu controle.</p></div>
+        <div class="extension-tabs">
+          <button class="ext-tab active" data-ext="skills" type="button">Skills</button>
+          <button class="ext-tab" data-ext="mcp" type="button">MCP</button>
+          <button class="ext-tab" data-ext="connect" type="button">Connect / OAuth</button>
+          <button class="ext-tab" data-ext="finance" type="button">Finance</button>
+          <button class="ext-tab" data-ext="intel" type="button">Kamy Intel</button>
+        </div>
+        <div id="ext-skills" class="ext-panel"></div>
+        <div id="ext-mcp" class="ext-panel hidden"></div>
+        <div id="ext-connect" class="ext-panel hidden"></div>
+        <div id="ext-finance" class="ext-panel hidden"></div>
+        <div id="ext-intel" class="ext-panel hidden"></div>
+        <div class="note ext-note"><b>Limite de segurança.</b> Revise os servidores MCP, permissões e contas conectadas. Operações financeiras exigem confirmação explícita.</div>
+      </section>
+
+      <section id="settings" class="view hidden">
+        <div class="pagehead"><div class="eyebrow">CONTROLE LOCAL / 05</div><h1>Configurações e <em>controle.</em></h1><p>Configure o aplicativo que está rodando nesta máquina. Nenhuma conta compartilhada é criada.</p></div>
+        <div class="settings-grid">
+          <section class="settings-card">
+            <div class="settings-kicker">01 / INTERFACE</div><h2>Leitura e aparência</h2><p>Ajuste a interface local.</p>
+            <label class="settings-field">Tamanho do texto<select id="uiScale"><option value="1">Padrão</option><option value="1.08">Grande</option><option value="1.16">Extra grande</option></select></label>
+            <label class="settings-toggle"><input type="checkbox" id="uiContrast"><span><b>Alto contraste</b><small>Reforça textos, bordas e foco.</small></span></label>
+            <label class="settings-toggle"><input type="checkbox" id="uiCompact"><span><b>Espaçamento compacto</b><small>Mostra mais itens na tela.</small></span></label>
+            <label class="settings-toggle"><input type="checkbox" id="uiMotion"><span><b>Reduzir animações</b><small>Desativa animações não essenciais.</small></span></label>
+            <div class="settings-actions"><button type="button" class="gradient-btn" id="saveUi">Salvar aparência</button><button type="button" class="secondary-btn" id="resetUi">Restaurar</button></div>
+          </section>
+
+          <section class="settings-card">
+            <div class="settings-kicker">02 / PROVEDOR DE IA</div><h2>NVIDIA NIM padrão</h2><p>Salve uma chave local criptografada para os agentes sem chave própria.</p>
+            <form id="defaultProviderForm">
+              <label class="settings-field">Modelo padrão<input id="defaultModel" name="default_model" value="meta/llama-3.3-70b-instruct" required maxlength="160"></label>
+              <label class="settings-field">Chave NVIDIA API<input id="defaultApiKey" type="password" autocomplete="new-password" placeholder="nvapi-… (vazio mantém a atual)"></label>
+              <label class="settings-toggle"><input type="checkbox" id="clearDefaultKey"><span><b>Remover chave padrão</b><small>Agentes sem chave própria voltarão ao modo de demonstração.</small></span></label>
+              <label class="settings-toggle"><input type="checkbox" id="applyModelAll"><span><b>Aplicar modelo a todos os agentes</b><small>Atualiza todos os modelos salvos.</small></span></label>
+              <div class="settings-actions"><button class="gradient-btn">Salvar provedor</button><span id="providerState" class="settings-state">Carregando…</span></div>
+            </form>
+          </section>
+
+          <section class="settings-card settings-wide">
+            <div class="settings-kicker">03 / AGENTES</div><h2>Modelo e chave individuais</h2><p>Uma chave privada tem prioridade sobre a chave padrão.</p>
+            <div id="agentProviderCards" class="agent-provider-grid"><p>Carregando agentes…</p></div>
+          </section>
+
+          <section class="settings-card">
+            <div class="settings-kicker">04 / EXECUÇÃO</div><h2>Runtime local</h2><p>Detalhes somente para leitura do processo atual.</p>
+            <div id="runtimeInfo" class="runtime-list">Carregando runtime…</div>
+          </section>
+
+          <section class="settings-card">
+            <div class="settings-kicker">05 / INTEGRAÇÕES</div><h2>Suas ferramentas</h2><p>Configure seus MCPs, Skills, OAuth e conexão Binance em Extensões.</p>
+            <div class="settings-actions"><button type="button" class="gradient-btn" data-open-view="extensions">Abrir extensões</button><button type="button" class="secondary-btn" data-open-view="policy">Abrir permissões</button></div>
+            <p class="settings-footnote">As configurações pertencem somente a esta instalação local.</p>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <form id="agentForm" class="modalbox">
+      <button type="button" id="close" class="close" aria-label="Fechar">×</button>
+      <div class="eyebrow">NOVO AGENTE</div><h2>Adicione seu <em>agente.</em></h2><p>Conecte um modelo NVIDIA NIM ou comece em modo de demonstração.</p>
+      <label>Nome<input name="name" required placeholder="Ex.: ORBIT"></label>
+      <label>Função<input name="role" required placeholder="Ex.: Analista de produto"></label>
+      <label>Descrição<input name="description" placeholder="Como ele deve ajudar?"></label>
+      <label>Modelo NVIDIA<input name="model" value="meta/llama-3.3-70b-instruct"></label>
+      <label>Chave NVIDIA API <small>Opcional — armazenada criptografada</small><input name="api_key" type="password" placeholder="nvapi-..."></label>
+      <label>Domínios permitidos<input name="domains" value="example.com"></label>
+      <button class="gradient-btn">Criar agente ↗</button>
+    </form>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script src="/static/app.js"></script>
+  <script src="/static/extensions.js"></script>
+  <script src="/static/settings.js"></script>
+</body>
+</html>
