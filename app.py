@@ -18,7 +18,7 @@ ROOT=Path(__file__).parent
 DATA=Path(os.getenv("KAMY_DATA_DIR","./data")); WORK=DATA/"workspaces"; DB=DATA/"kamy.sqlite3"
 DATA.mkdir(parents=True,exist_ok=True); WORK.mkdir(parents=True,exist_ok=True)
 NVIDIA_URL="https://integrate.api.nvidia.com/v1/chat/completions"
-app=FastAPI(title="Kamy Bot",version="1.2.5",docs_url=None,redoc_url=None,openapi_url=None)
+app=FastAPI(title="Kamy Bot",version="1.2.6",docs_url=None,redoc_url=None,openapi_url=None)
 from security import LocalOnlyMiddleware, SecurityHeadersMiddleware
 app.add_middleware(LocalOnlyMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -46,7 +46,7 @@ def protect_secret(value):
 def reveal_secret(value):
  if not value:return None
  if not value.startswith("fernet:"):return value
- try:return secret_cipher().decrypt(value[8:].encode()).decode()
+ try:return secret_cipher().decrypt(value[7:].encode()).decode()
  except InvalidToken:raise HTTPException(503,"Não foi possível descriptografar a chave do coworker. Verifique KAMY_MASTER_KEY.")
 def migrate_agent_secrets():
  if not os.getenv("KAMY_MASTER_KEY","").strip():return
