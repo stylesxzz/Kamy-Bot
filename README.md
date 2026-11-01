@@ -63,10 +63,10 @@ O mascote foi redesenhado como uma estrela de quatro pontas, inspirado no símbo
 
 ### Inicialização rápida
 
-Depois que o pacote kamy-bot estiver publicado no registro npm, a instalação e a inicialização serão feitas com:
+Depois que o pacote kamy-bot estiver publicado no registro npm, use o próprio npm para baixar, preparar e iniciar o aplicativo em uma única chamada:
 
 ~~~bash
-npx kamy-bot
+npm exec --yes --package=kamy-bot -- kamy-bot
 ~~~
 
 Na primeira execução, o comando prepara automaticamente:
@@ -80,7 +80,7 @@ Na primeira execução, o comando prepara automaticamente:
 
 Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir .env, .venv ou os dados do usuário.
 
-> **Publicação npm:** o launcher, o manifesto package.json e os arquivos do aplicativo já estão neste repositório. O comando público npx kamy-bot só passa a funcionar depois que o pacote for publicado no npm. A publicação exige autenticação na conta npm do mantenedor; esta alteração no GitHub, sozinha, não publica no registro. Até lá, use o launcher diretamente do clone:
+> **Publicação npm:** o launcher, o manifesto package.json e os arquivos do aplicativo já estão neste repositório. O comando acima só baixa o pacote quando a versão estiver publicada no registro npm. O código no GitHub, por si só, não publica o pacote. Até a publicação, teste pelo clone:
 
 ~~~bash
 git clone https://github.com/stylesxzz/Kamy-Bot.git
@@ -93,7 +93,7 @@ node ./bin/kamy-bot.js
 Em computadores com Docker instalado e iniciado:
 
 ~~~bash
-npx kamy-bot --docker
+npm exec --yes --package=kamy-bot -- kamy-bot --docker
 ~~~
 
 O modo Docker constrói a imagem Playwright, inicia Chromium no container e persiste os dados no volume kamy_data. O Docker **não é instalado automaticamente** pelo CLI, pois isso exige permissões administrativas e varia por sistema operacional. Instale e inicie o Docker Desktop/Engine antes de usar esta opção.
@@ -102,21 +102,21 @@ O modo Docker constrói a imagem Playwright, inicia Chromium no container e pers
 
 | Comando | Comportamento |
 |---|---|
-| npx kamy-bot | Prepara o ambiente Python e inicia o modo local |
-| npx kamy-bot --docker | Inicia com Docker e browser Playwright |
-| npx kamy-bot --no-open | Inicia sem abrir o navegador |
-| npx kamy-bot --port 9000 | Usa outra porta local |
-| npx kamy-bot --help | Mostra a ajuda |
+| npm exec --yes --package=kamy-bot -- kamy-bot | Prepara o ambiente Python e inicia o modo local |
+| npm exec --yes --package=kamy-bot -- kamy-bot --docker | Inicia com Docker e browser Playwright |
+| npm exec --yes --package=kamy-bot -- kamy-bot --no-open | Inicia sem abrir o navegador |
+| npm exec --yes --package=kamy-bot -- kamy-bot --port 9000 | Usa outra porta local |
+| npm exec --yes --package=kamy-bot -- kamy-bot --help | Mostra a ajuda |
 
 ### Sistemas operacionais
 
-**Linux (Debian/Kali/Ubuntu):** instale Node.js 18+ e Python 3.11+, clone o repositório e execute node ./bin/kamy-bot.js. Para o modo Docker, instale Docker Engine com o plugin Compose.
+**Linux (Debian/Kali/Ubuntu):** instale Node.js 18+ e Python 3.11+. Depois da publicação no npm, execute o comando npm exec acima. Para o modo Docker, instale Docker Engine com o plugin Compose.
 
 **Windows:** instale Node.js 18+ e Python 3.11+. No PowerShell, execute node .\bin\kamy-bot.js depois de clonar o repositório. O CLI usa o launcher py -3 quando disponível.
 
-**macOS:** instale Node.js 18+ e Python 3.11+. No Terminal, execute node ./bin/kamy-bot.js. Docker Desktop é opcional.
+**macOS:** instale Node.js 18+ e Python 3.11+. No Terminal, execute o comando npm exec acima. Docker Desktop é opcional.
 
-**Android / Termux:** instale Termux de uma fonte oficial, depois execute pkg update -y && pkg install -y nodejs-lts python. Clone o repositório e rode node ./bin/kamy-bot.js. O modo nativo funciona sem Playwright; Docker não é suportado como requisito do fluxo Termux.
+**Android / Termux:** instale Termux de uma fonte oficial, depois execute pkg update -y && pkg install -y nodejs-lts python. Após a publicação do pacote, rode o comando npm exec acima. O modo nativo funciona sem Playwright; Docker não é suportado como requisito do fluxo Termux.
 
 ## Configurações
 
