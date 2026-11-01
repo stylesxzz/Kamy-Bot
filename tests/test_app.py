@@ -180,7 +180,7 @@ def test_npm_launcher_metadata_and_help():
     assert package["bin"]["kamy-bot"] == "bin/kamy-bot.js"
     if shutil.which("node"):
         result = subprocess.run(["node", "bin/kamy-bot.js", "--help"], check=True, capture_output=True, text=True)
-        assert "npm exec --yes --package=kamy-bot -- kamy-bot" in result.stdout
+        assert "npm exec --yes --package=./Kamy-Bot -- kamy-bot" in result.stdout
 
 
 
