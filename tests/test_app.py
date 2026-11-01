@@ -194,3 +194,11 @@ def test_settings_view_is_a_sibling_of_extensions_view():
     # .view section (a hidden parent would make the child view impossible to show).
     assert html[extensions_start:settings_start].rstrip().endswith("</section>")
     assert html[settings_start:main_end].count("<section") == html[settings_start:main_end].count("</section>")
+
+
+
+def test_python_314_uses_pydantic_with_binary_core_wheel():
+    requirements = Path("requirements.txt").read_text(encoding="utf-8")
+    launcher = Path("bin/kamy-bot.js").read_text(encoding="utf-8")
+    assert "pydantic==2.14.1" in requirements
+    assert "--only-binary=pydantic-core" in launcher
