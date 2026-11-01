@@ -200,7 +200,7 @@ def test_settings_view_is_a_sibling_of_extensions_view():
 def test_python_314_uses_pydantic_with_binary_core_wheel():
     requirements = Path("requirements.txt").read_text(encoding="utf-8")
     launcher = Path("bin/kamy-bot.js").read_text(encoding="utf-8")
-    assert "pydantic==2.14.1" in requirements
+    assert "pydantic==2.13.5" in requirements
     assert "--only-binary=pydantic-core" in launcher
 
 
