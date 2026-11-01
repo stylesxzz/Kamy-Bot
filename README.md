@@ -78,7 +78,7 @@ Na primeira execução, o comando prepara automaticamente:
 5. O banco SQLite e a pasta data/.
 6. O servidor local e a abertura do navegador em http://127.0.0.1:8765.
 
-Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir `.env`, o `.venv` válido ou os dados do usuário. Se o `.venv` estiver incompleto/inválido, somente essa pasta será recriada. A versão 1.2.2 atualiza Pydantic para 2.14.1, cujo pydantic-core 2.50.1 oferece wheels binárias para CPython 3.14. O launcher verifica que o interpretador está realmente dentro de `.venv`, repara um ambiente virtual incompleto, instala as dependências com esse interpretador, valida os imports e só inicia o servidor depois dessas verificações.
+Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir `.env`, o `.venv` válido ou os dados do usuário. Se o `.venv` estiver incompleto/inválido, somente essa pasta será recriada. Para preparar o ambiente sem abrir o app, use `npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only`. A versão 1.2.3 atualiza Pydantic para 2.14.1, cujo pydantic-core 2.50.1 oferece wheels binárias para CPython 3.14. O launcher verifica que o interpretador está realmente dentro de `.venv`, repara um ambiente virtual incompleto, instala as dependências com esse interpretador, valida os imports e só inicia o servidor depois dessas verificações.
 
 > **Importante:** `--package=Kamy-Bot` sem `./` é interpretado como nome de pacote do registro npm e falha porque nomes publicados não aceitam letras maiúsculas. `--package=./Kamy-Bot` aponta para a pasta local do clone e usa o `package.json` dali.
 
@@ -121,6 +121,7 @@ O modo Docker constrói a imagem Playwright, inicia Chromium no container e pers
 | npm exec --yes --package=./Kamy-Bot -- kamy-bot --docker | Inicia com Docker e browser Playwright |
 | npm exec --yes --package=./Kamy-Bot -- kamy-bot --no-open | Inicia sem abrir o navegador |
 | npm exec --yes --package=./Kamy-Bot -- kamy-bot --port 9000 | Usa outra porta local |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --setup-only | Prepara .venv e instala requirements.txt sem iniciar o servidor |
 | npm exec --yes --package=./Kamy-Bot -- kamy-bot --help | Mostra a ajuda |
 
 ### Sistemas operacionais
