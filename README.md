@@ -57,7 +57,7 @@ O mascote foi redesenhado como uma estrela de quatro pontas, inspirado no símbo
 ### Requisitos
 
 - Node.js 18 ou superior.
-- Python 3.11 ou superior.
+- Python 3.11 ou superior (incluindo Python 3.14).
 - Conexão com a Internet na primeira instalação, para baixar as dependências Python.
 - Docker Engine/Desktop somente para o modo com navegador isolado.
 
@@ -78,7 +78,7 @@ Na primeira execução, o comando prepara automaticamente:
 5. O banco SQLite e a pasta data/.
 6. O servidor local e a abertura do navegador em http://127.0.0.1:8765.
 
-Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir .env, .venv ou os dados do usuário.
+Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir .env, .venv ou os dados do usuário. A versão 1.2.1 atualiza Pydantic para 2.14.1, cujo pydantic-core 2.50.1 oferece wheels binárias para CPython 3.14; o instalador solicita esse wheel em vez de tentar compilar a extensão Rust.
 
 > **Publicação npm:** o launcher, o manifesto package.json e os arquivos do aplicativo já estão neste repositório. O comando acima só baixa o pacote quando a versão estiver publicada no registro npm. O código no GitHub, por si só, não publica o pacote. Até a publicação, teste pelo clone:
 
@@ -87,6 +87,21 @@ git clone https://github.com/stylesxzz/Kamy-Bot.git
 cd Kamy-Bot
 node ./bin/kamy-bot.js
 ~~~
+
+
+### Corrigir uma instalação antiga com Python 3.14
+
+Se uma execução anterior parou em `Building wheel for pydantic-core`, não apague seu diretório `.env` nem os dados. Atualize o Kamy para a versão 1.2.1 e execute novamente o launcher. A alteração no hash de `requirements.txt` fará o instalador atualizar as dependências dentro do `.venv`.
+
+Também é possível atualizar manualmente a instalação existente:
+
+~~~bash
+cd ~/.kamy-bot/app
+./.venv/bin/python -m pip install --upgrade pip
+./.venv/bin/python -m pip install --only-binary=pydantic-core -r requirements.txt
+~~~
+
+A versão antiga de Pydantic (2.11.4) puxava uma versão de `pydantic-core` com PyO3 0.24.1, que não reconhece Python 3.14. O projeto agora usa Pydantic 2.14.1 e `pydantic-core` 2.50.1, que publica wheels CPython 3.14 para Linux x86-64 e ARM64, entre outras plataformas. Se sua plataforma não tiver wheel compatível, o pip interromperá com uma mensagem de wheel indisponível em vez de iniciar uma compilação Rust inesperada.
 
 ### Docker com navegador isolado
 
