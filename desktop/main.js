@@ -6,7 +6,7 @@ const {app, BrowserWindow, ipcMain, session, shell} = require("electron");
 const targetUrl = process.argv.find(value => /^http:\/\/(127\.0\.0\.1|localhost):\d+/.test(value));
 if (!targetUrl) {
   console.error("Kamy Desktop: URL local do servidor não foi informada.");
-  app.quit();
+  app.exit(1);
 }
 
 const isWayland = process.platform === "linux" &&
@@ -137,7 +137,8 @@ app.whenReady().then(() => {
     const origin = details?.requestingUrl || webContents.getURL();
     const local = origin.startsWith("http://127.0.0.1:") ||
       origin.startsWith("http://localhost:");
-    callback(local && permission === "media");
+    const audioOnly = Array.isArray(details?.mediaTypes) && details.mediaTypes.includes("audio") && !details.mediaTypes.includes("video");
+    callback(local && permission === "media" && audioOnly);
   });
 
   session.defaultSession.setPermissionCheckHandler((_webContents, permission, origin) => {
