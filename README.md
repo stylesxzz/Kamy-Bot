@@ -66,7 +66,7 @@ O mascote foi redesenhado como uma estrela de quatro pontas, inspirado no símbo
 Depois que o pacote kamy-bot estiver publicado no registro npm, use o próprio npm para baixar, preparar e iniciar o aplicativo em uma única chamada:
 
 ~~~bash
-npm exec --yes --package=kamy-bot -- kamy-bot
+npm exec --yes --package=./Kamy-Bot -- kamy-bot
 ~~~
 
 Na primeira execução, o comando prepara automaticamente:
