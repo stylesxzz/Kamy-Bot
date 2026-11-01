@@ -80,6 +80,7 @@ def test_desktop_island_assets_and_voice_controls_exist():
     assert "contextIsolation: true" in desktop_main
     assert "nodeIntegration: false" in desktop_main
     assert "contextBridge.exposeInMainWorld" in preload
+    assert "audioOnly" in desktop_main
 
 
 def test_electron_is_an_optional_pinned_dependency():
