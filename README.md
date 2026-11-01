@@ -63,7 +63,7 @@ O mascote foi redesenhado como uma estrela de quatro pontas, inspirado no símbo
 
 ### Inicialização rápida
 
-Depois que o pacote kamy-bot estiver publicado no registro npm, use o próprio npm para baixar, preparar e iniciar o aplicativo em uma única chamada:
+Com o repositório clonado na pasta `Kamy-Bot`, execute a partir da pasta que contém esse diretório:
 
 ~~~bash
 npm exec --yes --package=./Kamy-Bot -- kamy-bot
@@ -78,9 +78,9 @@ Na primeira execução, o comando prepara automaticamente:
 5. O banco SQLite e a pasta data/.
 6. O servidor local e a abertura do navegador em http://127.0.0.1:8765.
 
-Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir .env, .venv ou os dados do usuário. A versão 1.2.1 atualiza Pydantic para 2.14.1, cujo pydantic-core 2.50.1 oferece wheels binárias para CPython 3.14; o instalador solicita esse wheel em vez de tentar compilar a extensão Rust.
+Nas próximas execuções, o CLI verifica a versão das dependências e atualiza o código do aplicativo sem substituir `.env`, o `.venv` válido ou os dados do usuário. Se o `.venv` estiver incompleto/inválido, somente essa pasta será recriada. A versão 1.2.2 atualiza Pydantic para 2.14.1, cujo pydantic-core 2.50.1 oferece wheels binárias para CPython 3.14. O launcher verifica que o interpretador está realmente dentro de `.venv`, repara um ambiente virtual incompleto, instala as dependências com esse interpretador, valida os imports e só inicia o servidor depois dessas verificações.
 
-> **Publicação npm:** o launcher, o manifesto package.json e os arquivos do aplicativo já estão neste repositório. O comando acima só baixa o pacote quando a versão estiver publicada no registro npm. O código no GitHub, por si só, não publica o pacote. Até a publicação, teste pelo clone:
+> **Importante:** `--package=Kamy-Bot` sem `./` é interpretado como nome de pacote do registro npm e falha porque nomes publicados não aceitam letras maiúsculas. `--package=./Kamy-Bot` aponta para a pasta local do clone e usa o `package.json` dali.
 
 ~~~bash
 git clone https://github.com/stylesxzz/Kamy-Bot.git
@@ -108,7 +108,7 @@ A versão antiga de Pydantic (2.11.4) puxava uma versão de `pydantic-core` com 
 Em computadores com Docker instalado e iniciado:
 
 ~~~bash
-npm exec --yes --package=kamy-bot -- kamy-bot --docker
+npm exec --yes --package=./Kamy-Bot -- kamy-bot --docker
 ~~~
 
 O modo Docker constrói a imagem Playwright, inicia Chromium no container e persiste os dados no volume kamy_data. O Docker **não é instalado automaticamente** pelo CLI, pois isso exige permissões administrativas e varia por sistema operacional. Instale e inicie o Docker Desktop/Engine antes de usar esta opção.
@@ -117,11 +117,11 @@ O modo Docker constrói a imagem Playwright, inicia Chromium no container e pers
 
 | Comando | Comportamento |
 |---|---|
-| npm exec --yes --package=kamy-bot -- kamy-bot | Prepara o ambiente Python e inicia o modo local |
-| npm exec --yes --package=kamy-bot -- kamy-bot --docker | Inicia com Docker e browser Playwright |
-| npm exec --yes --package=kamy-bot -- kamy-bot --no-open | Inicia sem abrir o navegador |
-| npm exec --yes --package=kamy-bot -- kamy-bot --port 9000 | Usa outra porta local |
-| npm exec --yes --package=kamy-bot -- kamy-bot --help | Mostra a ajuda |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot | Prepara o ambiente Python e inicia o modo local |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --docker | Inicia com Docker e browser Playwright |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --no-open | Inicia sem abrir o navegador |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --port 9000 | Usa outra porta local |
+| npm exec --yes --package=./Kamy-Bot -- kamy-bot --help | Mostra a ajuda |
 
 ### Sistemas operacionais
 
@@ -131,7 +131,7 @@ O modo Docker constrói a imagem Playwright, inicia Chromium no container e pers
 
 **macOS:** instale Node.js 18+ e Python 3.11+. No Terminal, execute o comando npm exec acima. Docker Desktop é opcional.
 
-**Android / Termux:** instale Termux de uma fonte oficial, depois execute pkg update -y && pkg install -y nodejs-lts python. Após a publicação do pacote, rode o comando npm exec acima. O modo nativo funciona sem Playwright; Docker não é suportado como requisito do fluxo Termux.
+**Android / Termux:** instale Termux de uma fonte oficial, depois execute `pkg update -y && pkg install -y nodejs-lts python`. Clone o repositório e execute o comando npm exec acima a partir da pasta que contém `Kamy-Bot`. O modo nativo funciona sem Playwright; Docker não é suportado como requisito do fluxo Termux.
 
 ## Configurações
 
