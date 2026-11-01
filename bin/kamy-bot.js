@@ -2,7 +2,7 @@
 "use strict";
 const fs=require("node:fs"),path=require("node:path"),os=require("node:os"),crypto=require("node:crypto"),http=require("node:http");
 const {spawn,spawnSync}=require("node:child_process");
-const VERSION="1.2.0",PACKAGE_ROOT=path.resolve(__dirname,"..");
+const VERSION="1.2.1",PACKAGE_ROOT=path.resolve(__dirname,"..");
 const INSTALL_ROOT=path.resolve(process.env.KAMY_HOME||path.join(os.homedir(),".kamy-bot")),APP_DIR=path.join(INSTALL_ROOT,"app");
 const RUNTIME_FILES=["app.py","extensions.py","security.py","requirements.txt","requirements-browser.txt",".env.example","Dockerfile","docker-compose.yml","static","assets"];
 function help(){console.log("Kamy Bot "+VERSION+" — local AI companion\n\nUsage:\n  npm exec --yes --package=kamy-bot -- kamy-bot              Install/update and start the native local app\n  npm exec --yes --package=kamy-bot -- kamy-bot --docker     Start with Docker and isolated Chromium browser\n  npm exec --yes --package=kamy-bot -- kamy-bot --no-open    Do not open the browser automatically\n  npm exec --yes --package=kamy-bot -- kamy-bot --port 9000  Use a different localhost port\n  npm exec --yes --package=kamy-bot -- kamy-bot --help       Show this help\n\nRequirements: Node.js 18+ and Python 3.11+.\nDocker Engine/Desktop is required only for --docker.\nLocal files: "+INSTALL_ROOT+"\n")}
@@ -30,7 +30,7 @@ function installVenv(python){
  const venvPython=process.platform==="win32"?path.join(APP_DIR,".venv","Scripts","python.exe"):path.join(APP_DIR,".venv","bin","python");
  if(!fs.existsSync(venvPython)){console.log("Criando ambiente virtual Python (.venv)...");run(python.command,[...python.prefix,"-m","venv",".venv"],{cwd:APP_DIR})}
  const requirementsPath=path.join(APP_DIR,"requirements.txt"),digest=crypto.createHash("sha256").update(fs.readFileSync(requirementsPath)).digest("hex"),marker=path.join(APP_DIR,".venv",".kamy-requirements-sha256");
- if(!fs.existsSync(marker)||fs.readFileSync(marker,"utf8").trim()!==digest){console.log("Instalando/atualizando requirements.txt no .venv...");run(venvPython,["-m","pip","install","--disable-pip-version-check","--upgrade","pip"],{cwd:APP_DIR});run(venvPython,["-m","pip","install","--disable-pip-version-check","-r",requirementsPath],{cwd:APP_DIR});fs.writeFileSync(marker,digest+"\n","utf8")}
+ if(!fs.existsSync(marker)||fs.readFileSync(marker,"utf8").trim()!==digest){console.log("Instalando/atualizando requirements.txt no .venv...");run(venvPython,["-m","pip","install","--disable-pip-version-check","--upgrade","pip"],{cwd:APP_DIR});run(venvPython,["-m","pip","install","--disable-pip-version-check","--only-binary=pydantic-core","-r",requirementsPath],{cwd:APP_DIR});fs.writeFileSync(marker,digest+"\n","utf8")}
  return venvPython;
 }
 function openBrowser(url){
